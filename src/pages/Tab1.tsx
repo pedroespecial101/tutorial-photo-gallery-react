@@ -1,22 +1,52 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
-import ExploreContainer from '../components/ExploreContainer';
+import React from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon, IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCardContent, IonText, IonFab, IonFabButton } from '@ionic/react';
+import { scanOutline } from 'ionicons/icons';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import './Tab1.css';
 
 const Tab1: React.FC = () => {
+  const { scanResult, startScan } = useBarcodeScanner();
+
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Tab 1</IonTitle>
+          <IonTitle>Barcode Scanner</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen>
+      <IonContent fullscreen className="ion-padding">
         <IonHeader collapse="condense">
           <IonToolbar>
-            <IonTitle size="large">Tab 1</IonTitle>
+            <IonTitle size="large">Barcode Scanner</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <ExploreContainer name="Tab 1 page" />
+        
+        {scanResult ? (
+          <IonCard>
+            <IonCardHeader>
+              <IonCardSubtitle>Scan Result</IonCardSubtitle>
+              <IonCardTitle>Barcode Content</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonText>
+                <p>{scanResult.content}</p>
+              </IonText>
+              <IonText color="medium">
+                <p>Scanned at: {new Date(scanResult.timestamp).toLocaleString()}</p>
+              </IonText>
+            </IonCardContent>
+          </IonCard>
+        ) : (
+          <div className="ion-text-center ion-padding">
+            <p>Press the button below to start scanning a barcode.</p>
+          </div>
+        )}
+        
+        <IonFab vertical="bottom" horizontal="center" slot="fixed">
+          <IonFabButton onClick={() => startScan()}>
+            <IonIcon icon={scanOutline}></IonIcon>
+          </IonFabButton>
+        </IonFab>
       </IonContent>
     </IonPage>
   );

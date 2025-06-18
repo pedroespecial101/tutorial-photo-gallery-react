@@ -4,5 +4,15 @@
 	"webDir": "dist",
 	"server": {
 		"androidScheme": "https"
-	}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"CapacitorBarcodeScannerPlugin",
+		"CAPCameraPlugin",
+		"FilesystemPlugin",
+		"HapticsPlugin",
+		"KeyboardPlugin",
+		"PreferencesPlugin",
+		"StatusBarPlugin"
+	]
 }

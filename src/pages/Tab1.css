@@ -1,0 +1,23 @@
+/* Hide the entire app UI when scanner is active */
+body.scanner-active {
+  visibility: hidden;
+  /* Important! Prevents interaction with UI elements */
+  pointer-events: none;
+}
+
+/* Make sure scanner UI elements are visible during scanning */
+body.scanner-active .scanner-hide {
+  display: none;
+}
+
+/* Ensure the BarcodeScanner UI is displayed */
+html.scanner-active, body.scanner-active {
+  --background: transparent;
+  background: transparent;
+}
+
+/* Keep the scan button visible if we need it during scanning */
+ion-fab.scanner-visible {
+  visibility: visible;
+  z-index: 1;
+}
