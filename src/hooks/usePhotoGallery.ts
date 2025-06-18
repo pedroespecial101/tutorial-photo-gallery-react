@@ -38,9 +38,9 @@ export function usePhotoGallery() {
     const photo = await Camera.getPhoto({
       resultType: CameraResultType.Uri,
       source: CameraSource.Camera,
-      width: 2000,
-      height: 2000,
-      quality: 90,
+      width: 500,
+      height: 500,
+      quality: 70,
       // presentationStyle: 'popover'
       // allowEditing: true
     });

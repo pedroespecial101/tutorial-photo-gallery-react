@@ -1,13 +1,15 @@
 import legacy from '@vitejs/plugin-legacy'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'  // Changed from 'vite'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     legacy()
   ],
+  server: {
+    allowedHosts: ['capacitor.petetreadaway.com']
+  },
   test: {
     globals: true,
     environment: 'jsdom',

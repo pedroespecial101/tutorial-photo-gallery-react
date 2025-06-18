@@ -75,7 +75,7 @@ const Tab3: React.FC = () => {
       
       // Make the POST request with FormData
       const response = await CapacitorHttp.post({
-        url: 'https://api.petetreadaway.com/api/image_upload/',
+        url: 'https://api.petetreadaway.com/api/image-upload/',
         headers: {
           // Don't set Content-Type as it will be automatically set with the boundary
           // for multipart/form-data by the browser/native HTTP client
