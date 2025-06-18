@@ -1,18 +1,13 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonImg, IonButton, IonToast, IonLoading, IonCard, IonCardContent, IonCardHeader, IonCardTitle } from '@ionic/react';
 import { useState, useEffect } from 'react';
-import { usePhotoGallery } from '../hooks/usePhotoGallery';
-import { CapacitorHttp } from '@capacitor/core';
+import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { isPlatform } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import './Tab3.css';
 
 const Tab3: React.FC = () => {
-  const { photos } = usePhotoGallery();
-  const [isUploading, setIsUploading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastColor, setToastColor] = useState('');
+  const { photos, uploadPhotos, isUploading, uploadStatus, hideUploadStatus } = usePhotoGalleryContext();
   
   // Debug state variables
   const [debugInfo, setDebugInfo] = useState<{
@@ -99,71 +94,6 @@ const Tab3: React.FC = () => {
     });
   }, [photos]);
 
-  const uploadPhotos = async () => {
-    if (photos.length === 0) {
-      setToastMessage('No photos to upload');
-      setToastColor('warning');
-      setShowToast(true);
-      return;
-    }
-  
-    setIsUploading(true);
-    
-    try {
-      console.log('Starting photo upload process...');
-      
-      const formData = new FormData();
-      formData.append('sku', 'IOS-Test1');
-      formData.append('debug', 'true');
-      
-      // Process each photo and add to FormData
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        
-        if (!photo.webviewPath) {
-          throw new Error(`Photo ${i} has no webviewPath`);
-        }
-        
-        const fileName = photo.filepath.slice(photo.filepath.lastIndexOf('/') + 1);
-        const response = await fetch(photo.webviewPath);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image ${fileName}: ${response.status}`);
-        }
-        
-        const fileData = await response.blob();
-        formData.append('images', fileData, fileName);
-      }
-      
-      // Use fetch instead of CapacitorHttp.post
-      const response = await fetch('https://api.petetreadaway.com/api/image-upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'
-          // Don't set Content-Type - let the browser set it with boundary
-        }
-      });
-      
-      if (response.ok) {
-        setToastMessage('Images uploaded successfully!');
-        setToastColor('success');
-      } else {
-        const errorText = await response.text();
-        setToastMessage(`Upload failed: ${response.status} ${errorText}`);
-        setToastColor('danger');
-      }
-      
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      setToastMessage(`Error uploading images: ${error instanceof Error ? error.message : String(error)}`);
-      setToastColor('danger');
-    } finally {
-      setIsUploading(false);
-      setShowToast(true);
-    }
-  };
-
   return (
     <IonPage>
       <IonHeader>
@@ -181,7 +111,7 @@ const Tab3: React.FC = () => {
         <div className="ion-padding">
           <IonButton 
             expand="block" 
-            onClick={uploadPhotos} 
+            onClick={() => uploadPhotos()} 
             disabled={photos.length === 0 || isUploading}
           >
             Upload Photos to API
@@ -241,11 +171,11 @@ const Tab3: React.FC = () => {
         />
         
         <IonToast
-          isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
-          message={toastMessage}
+          isOpen={uploadStatus.show}
+          onDidDismiss={hideUploadStatus}
+          message={uploadStatus.message}
           duration={3000}
-          color={toastColor}
+          color={uploadStatus.color}
         />
       </IonContent>
     </IonPage>

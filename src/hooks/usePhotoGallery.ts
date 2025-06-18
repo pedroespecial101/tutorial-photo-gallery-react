@@ -10,10 +10,22 @@ export interface UserPhoto {
   webviewPath?: string;
 }
 
+export interface UploadStatus {
+  message: string;
+  color: 'success' | 'danger' | 'warning';
+  show: boolean;
+}
+
 const PHOTO_STORAGE = 'photos';
 
 export function usePhotoGallery() {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
+    message: '',
+    color: 'success',
+    show: false
+  });
 
   const loadSaved = async () => {
     await cleanupPhotosStorage();
@@ -286,9 +298,145 @@ export function usePhotoGallery() {
     });
   };
 
+  const clearPhotos = async () => {
+    try {
+      console.log('Clearing photo session...');
+      
+      // Delete all photo files from filesystem
+      for (const photo of photos) {
+        try {
+          let filename: string;
+          
+          if (isPlatform('hybrid')) {
+            // Extract filename from full path
+            const docsSegmentIndex = photo.filepath.lastIndexOf('Documents/');
+            
+            if (docsSegmentIndex !== -1) {
+              filename = photo.filepath.substring(docsSegmentIndex + 'Documents/'.length);
+              if (filename.endsWith('/')) {
+                filename = filename.slice(0, -1);
+              }
+            } else {
+              filename = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
+              if (filename.endsWith('/')) {
+                filename = filename.slice(0, -1);
+              }
+            }
+          } else {
+            filename = photo.filepath;
+          }
+          
+          await Filesystem.deleteFile({
+            path: filename,
+            directory: Directory.Data
+          });
+          console.log(`Deleted file: ${filename}`);
+        } catch (error) {
+          console.error('Error deleting file:', photo.filepath, error);
+        }
+      }
+      
+      // Clear photos from state and preferences
+      setPhotos([]);
+      await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify([]) });
+      
+      console.log('Photo session cleared successfully');
+    } catch (error) {
+      console.error('Error clearing photo session:', error);
+    }
+  };
+
+  const uploadPhotos = async (sku?: string) => {
+    if (photos.length === 0) {
+      setUploadStatus({
+        message: 'No photos to upload',
+        color: 'warning',
+        show: true
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadStatus(prev => ({ ...prev, show: false }));
+    
+    try {
+      console.log('Starting photo upload process...');
+      
+      const formData = new FormData();
+      // Use provided SKU or fallback to hardcoded value
+      formData.append('sku', sku || 'IOS-Test1');
+      formData.append('debug', 'true');
+      
+      // Process each photo and add to FormData
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        
+        if (!photo.webviewPath) {
+          throw new Error(`Photo ${i} has no webviewPath`);
+        }
+        
+        const fileName = photo.filepath.slice(photo.filepath.lastIndexOf('/') + 1);
+        const response = await fetch(photo.webviewPath);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image ${fileName}: ${response.status}`);
+        }
+        
+        const fileData = await response.blob();
+        formData.append('images', fileData, fileName);
+      }
+      
+      // Upload to API
+      const response = await fetch('https://api.petetreadaway.com/api/image-upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        setUploadStatus({
+          message: 'Images uploaded successfully! Starting new session...',
+          color: 'success',
+          show: true
+        });
+        
+        // Clear photos after successful upload
+        await clearPhotos();
+      } else {
+        const errorText = await response.text();
+        setUploadStatus({
+          message: `Upload failed: ${response.status} ${errorText}`,
+          color: 'danger',
+          show: true
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      setUploadStatus({
+        message: `Error uploading images: ${error instanceof Error ? error.message : String(error)}`,
+        color: 'danger',
+        show: true
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const hideUploadStatus = () => {
+    setUploadStatus(prev => ({ ...prev, show: false }));
+  };
+
   return {
     photos,
     takePhoto,
-    deletePhoto
+    deletePhoto,
+    uploadPhotos,
+    clearPhotos,
+    isUploading,
+    uploadStatus,
+    hideUploadStatus
   };
 }
