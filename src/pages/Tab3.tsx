@@ -112,123 +112,81 @@ const Tab3: React.FC = () => {
     try {
       console.log('Starting photo upload process...');
       
-      if (isPlatform('hybrid')) {
-        console.log('Using native upload approach for hybrid platform');
-        // For native platforms (iOS/Android), we need to handle uploads differently
-        // We can't use FormData with Blobs as they don't serialize across the bridge
+      // Use a unified approach for both web and native platforms
+      // Create a standard FormData object for multipart/form-data
+      const formData = new FormData();
+      
+      // Add the SKU field
+      formData.append('sku', 'IOS-Test1');
+      
+      // Add debug parameter
+      formData.append('debug', 'true');
+      
+      console.log(`Platform: ${isPlatform('hybrid') ? 'Hybrid (iOS/Android)' : 'Web'}`);
+      console.log(`Processing ${photos.length} photos`);
+      
+      // Process each photo and add to FormData
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
         
-        // Create form parts manually for native platforms
-        const formDataParts: any[] = [
-          // Add the SKU field
-          {
-            name: 'sku',
-            value: 'IOS-Test1'
-          },
-          // Add debug parameter
-          {
-            name: 'debug',
-            value: 'true'
-          }
-        ];
-        
-        // Process each photo
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i];
-          
-          console.log(`Processing photo ${i + 1}/${photos.length}: ${photo.filepath}`);
-          
-          // Extract filename from filepath
-          const fileName = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
-          
-          try {
-            // Read the file as base64
-            const fileResult = await Filesystem.readFile({
-              path: photo.filepath
-            });
-            
-            // Add file to form parts
-            formDataParts.push({
-              name: 'images',
-              value: fileResult.data,
-              type: 'image/jpeg',
-              filename: fileName
-            });
-            
-            console.log(`Added photo ${fileName} to upload`);
-          } catch (error) {
-            console.error(`Error reading file ${fileName}:`, error);
-            throw new Error(`Failed to read file ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
-          }
+        if (!photo.webviewPath) {
+          throw new Error(`Photo ${i} has no webviewPath`);
         }
         
-        console.log('Sending native HTTP request with', formDataParts.length, 'parts');
+        // Extract filename from filepath
+        const fileName = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
         
-        // Make the POST request with native-compatible form data
-        const response = await CapacitorHttp.post({
-          url: 'https://api.petetreadaway.com/api/image-upload/',
-          headers: {
-            'Accept': 'application/json',
-            // Don't set Content-Type as it will be automatically set with the boundary
-          },
-          data: formDataParts,
-          // Tell the plugin this is a multipart form data request
-          dataType: 'multipart'
-        });
+        console.log(`Processing photo ${i + 1}/${photos.length}: ${fileName}`);
         
-        console.log('Upload response received:', response);
+        // Fetch the file from the webPath - this works on both web and native platforms
+        const response = await fetch(photo.webviewPath);
         
-        // Handle response
-        if (response.status >= 200 && response.status < 300) {
-          setToastMessage('Images uploaded successfully!');
-          setToastColor('success');
-        } else {
-          setToastMessage(`Upload failed: ${response.status} ${response.data?.message || ''}`);
-          setToastColor('danger');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image ${fileName}: ${response.status} ${response.statusText}`);
         }
+        
+        const fileData = await response.blob();
+        
+        console.log(`Successfully fetched photo ${fileName}, size: ${fileData.size} bytes, type: ${fileData.type}`);
+        
+        // Add the file to the FormData
+        formData.append('images', fileData, fileName);
+        
+        console.log(`Added photo ${fileName} to FormData`);
+      }
+      
+      console.log('Sending HTTP request with FormData');
+      
+      // Remove trailing slash from URL to avoid redirect
+      const apiUrl = 'https://api.petetreadaway.com/api/image-upload';
+      
+      // Make the POST request with FormData - works on both platforms
+      const response = await CapacitorHttp.post({
+        url: apiUrl,
+        headers: {
+          'Accept': 'application/json'
+        },
+        data: formData
+      });
+      
+      console.log('Upload response received:', response);
+      
+      // Handle response
+      if (response.status >= 200 && response.status < 300) {
+        setToastMessage('Images uploaded successfully!');
+        setToastColor('success');
       } else {
-        console.log('Using standard web upload approach');
-        // For web platform, use standard FormData approach
-        // Create a FormData object for multipart/form-data
-        const formData = new FormData();
-        
-        // Add the SKU field
-        formData.append('sku', 'IOS-Test1');
-        
-        // Process each photo and add to FormData
-        for (const photo of photos) {
-          // Get the file data
-          let fileName = photo.filepath;
-          
-          // Fetch the file from the webPath
-          const response = await fetch(photo.webviewPath!);
-          const fileData = await response.blob();
-          
-          // Add the file to the FormData
-          formData.append('images', fileData, fileName);
+        let errorDetails = '';
+        if (response.data?.detail) {
+          try {
+            errorDetails = JSON.stringify(response.data.detail);
+          } catch (e) {
+            errorDetails = String(response.data.detail);
+          }
         }
         
-        // Add debug parameter
-        formData.append('debug', 'true');
-        
-        console.log('Sending web request with FormData');
-        
-        // Make the POST request with FormData
-        const response = await CapacitorHttp.post({
-          url: 'https://api.petetreadaway.com/api/image-upload/',
-          headers: {},
-          data: formData
-        });
-        
-        console.log('Upload response received:', response);
-        
-        // Handle response
-        if (response.status >= 200 && response.status < 300) {
-          setToastMessage('Images uploaded successfully!');
-          setToastColor('success');
-        } else {
-          setToastMessage(`Upload failed: ${response.status} ${response.data?.message || ''}`);
-          setToastColor('danger');
-        }
+        setToastMessage(`Upload failed: ${response.status} ${errorDetails}`);
+        setToastColor('danger');
       }
     } catch (error) {
       console.error('Error uploading images:', error);
