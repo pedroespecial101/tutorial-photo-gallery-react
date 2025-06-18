@@ -106,24 +106,15 @@ const Tab3: React.FC = () => {
       setShowToast(true);
       return;
     }
-
+  
     setIsUploading(true);
     
     try {
       console.log('Starting photo upload process...');
       
-      // Use a unified approach for both web and native platforms
-      // Create a standard FormData object for multipart/form-data
       const formData = new FormData();
-      
-      // Add the SKU field
       formData.append('sku', 'IOS-Test1');
-      
-      // Add debug parameter
       formData.append('debug', 'true');
-      
-      console.log(`Platform: ${isPlatform('hybrid') ? 'Hybrid (iOS/Android)' : 'Web'}`);
-      console.log(`Processing ${photos.length} photos`);
       
       // Process each photo and add to FormData
       for (let i = 0; i < photos.length; i++) {
@@ -133,61 +124,36 @@ const Tab3: React.FC = () => {
           throw new Error(`Photo ${i} has no webviewPath`);
         }
         
-        // Extract filename from filepath
-        const fileName = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
-        
-        console.log(`Processing photo ${i + 1}/${photos.length}: ${fileName}`);
-        
-        // Fetch the file from the webPath - this works on both web and native platforms
+        const fileName = photo.filepath.slice(photo.filepath.lastIndexOf('/') + 1);
         const response = await fetch(photo.webviewPath);
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch image ${fileName}: ${response.status} ${response.statusText}`);
+          throw new Error(`Failed to fetch image ${fileName}: ${response.status}`);
         }
         
         const fileData = await response.blob();
-        
-        console.log(`Successfully fetched photo ${fileName}, size: ${fileData.size} bytes, type: ${fileData.type}`);
-        
-        // Add the file to the FormData
         formData.append('images', fileData, fileName);
-        
-        console.log(`Added photo ${fileName} to FormData`);
       }
       
-      console.log('Sending HTTP request with FormData');
-      
-      // Remove trailing slash from URL to avoid redirect
-      const apiUrl = 'https://api.petetreadaway.com/api/image-upload';
-      
-      // Make the POST request with FormData - works on both platforms
-      const response = await CapacitorHttp.post({
-        url: apiUrl,
+      // Use fetch instead of CapacitorHttp.post
+      const response = await fetch('https://api.petetreadaway.com/api/image-upload', {
+        method: 'POST',
+        body: formData,
         headers: {
           'Accept': 'application/json'
-        },
-        data: formData
+          // Don't set Content-Type - let the browser set it with boundary
+        }
       });
       
-      console.log('Upload response received:', response);
-      
-      // Handle response
-      if (response.status >= 200 && response.status < 300) {
+      if (response.ok) {
         setToastMessage('Images uploaded successfully!');
         setToastColor('success');
       } else {
-        let errorDetails = '';
-        if (response.data?.detail) {
-          try {
-            errorDetails = JSON.stringify(response.data.detail);
-          } catch (e) {
-            errorDetails = String(response.data.detail);
-          }
-        }
-        
-        setToastMessage(`Upload failed: ${response.status} ${errorDetails}`);
+        const errorText = await response.text();
+        setToastMessage(`Upload failed: ${response.status} ${errorText}`);
         setToastColor('danger');
       }
+      
     } catch (error) {
       console.error('Error uploading images:', error);
       setToastMessage(`Error uploading images: ${error instanceof Error ? error.message : String(error)}`);
