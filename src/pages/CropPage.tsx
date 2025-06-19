@@ -28,29 +28,55 @@ interface LocationState {
 const CropPage: React.FC = () => {
   const location = useLocation<LocationState>();
   const photo = location.state?.photo;
-  const { saveCroppedPhoto } = usePhotoGalleryContext();
+  const { saveCroppedPhoto, getOrCreateOriginalForCrop } = usePhotoGalleryContext();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [aspect, setAspect] = useState<number | undefined>(undefined);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [sourceImageForCropper, setSourceImageForCropper] = useState<string | null>(null);
+  const [isLoadingSource, setIsLoadingSource] = useState<boolean>(true);
   
-  // Detect image orientation and set initial aspect ratio
+  // Load original image for cropping and detect orientation to set aspect ratio
   useEffect(() => {
-    if (photo?.webviewPath) {
-      const img = new Image();
-      img.onload = () => {
-        // Set the initial aspect ratio based on orientation
-        const isLandscape = img.width > img.height;
-        if (isLandscape) {
-          setAspect(4/3); // Landscape default
-        } else {
-          setAspect(3/4); // Portrait default
+    const loadOriginalImage = async () => {
+      if (photo) {
+        try {
+          setIsLoadingSource(true);
+          // Get or create the original image for cropping
+          const originalImagePath = await getOrCreateOriginalForCrop(photo);
+          setSourceImageForCropper(originalImagePath);
+          
+          // Detect orientation to set aspect ratio
+          const img = new Image();
+          img.onload = () => {
+            // Set the initial aspect ratio based on orientation
+            const isLandscape = img.width > img.height;
+            if (isLandscape) {
+              setAspect(4/3); // Landscape default
+            } else {
+              setAspect(3/4); // Portrait default
+            }
+            setIsLoadingSource(false);
+          };
+          img.onerror = (error) => {
+            console.error('Error loading image for orientation detection:', error);
+            setIsLoadingSource(false);
+          };
+          img.src = originalImagePath;
+        } catch (error) {
+          console.error('Error loading original image for cropping:', error);
+          setIsLoadingSource(false);
+          // Fallback to using the main image if there's an error
+          if (photo?.webviewPath) {
+            setSourceImageForCropper(photo.webviewPath);
+          }
         }
-      };
-      img.src = photo.webviewPath;
-    }
-  }, [photo]);
+      }
+    };
+    
+    loadOriginalImage();
+  }, [photo, getOrCreateOriginalForCrop]);
   
   const handleAspectChange = (value: string) => {
     switch(value) {
@@ -69,7 +95,7 @@ const CropPage: React.FC = () => {
   };
 
   const handleCrop = async () => {
-    if (!photo || !photo.webviewPath || !croppedAreaPixels) {
+    if (!photo || !sourceImageForCropper || !croppedAreaPixels) {
       console.error('Missing required data for cropping');
       return;
     }
@@ -77,12 +103,12 @@ const CropPage: React.FC = () => {
     try {
       setIsCropping(true);
       const croppedImg = await getCroppedImg(
-        photo.webviewPath,
+        sourceImageForCropper, // Use the original image source for cropping
         croppedAreaPixels,
         0 // No rotation as requested
       );
       
-      // Save the cropped image
+      // Save the cropped image (will overwrite the main image, not the original)
       await saveCroppedPhoto(photo, croppedImg);
       
       // Go back to gallery
@@ -109,10 +135,14 @@ const CropPage: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        {photo?.webviewPath && (
+        {isLoadingSource ? (
+          <div className="loading-container" style={{ height: '70vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div>Loading image...</div>
+          </div>
+        ) : sourceImageForCropper ? (
           <div className="cropContainer" style={{ height: '70vh' }}>
             <Cropper
-              image={photo?.webviewPath}
+              image={sourceImageForCropper}
               crop={crop}
               zoom={zoom}
               onCropChange={setCrop}
@@ -131,6 +161,10 @@ const CropPage: React.FC = () => {
                 </IonSegmentButton>
               </IonSegment>
             </div>
+          </div>
+        ) : (
+          <div className="error-container" style={{ height: '70vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div>Unable to load image for cropping</div>
           </div>
         )}
       </IonContent>

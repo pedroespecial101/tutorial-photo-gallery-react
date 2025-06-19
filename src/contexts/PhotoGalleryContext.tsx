@@ -16,6 +16,7 @@ interface PhotoGalleryContextType {
   uploadStatus: UploadStatus;
   hideUploadStatus: () => void;
   loadSaved: () => Promise<void>; // Added to allow refreshing photos
+  getOrCreateOriginalForCrop: (photo: UserPhoto) => Promise<string>; // Added for original image handling
 }
 
 const PhotoGalleryContext = createContext<PhotoGalleryContextType | undefined>(undefined);

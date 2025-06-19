@@ -33,6 +33,75 @@ export interface ScannedCodes {
 
 const PHOTO_STORAGE = 'photos';
 
+// Helper function to extract just the filename from a filepath
+const extractFilename = (filepath: string): string => {
+  if (isPlatform('hybrid')) {
+    // For hybrid platforms, extract only the file name from the full URI
+    const docsSegmentIndex = filepath.lastIndexOf('Documents/');
+    
+    if (docsSegmentIndex !== -1) {
+      // Get everything after 'Documents/'
+      let filename = filepath.substring(docsSegmentIndex + 'Documents/'.length);
+      
+      // Remove any trailing slash
+      if (filename.endsWith('/')) {
+        filename = filename.slice(0, -1);
+      }
+      return filename;
+    } else {
+      // Fallback to just taking the part after the last '/'
+      let filename = filepath.substr(filepath.lastIndexOf('/') + 1);
+      
+      // Remove any trailing slash
+      if (filename.endsWith('/')) {
+        filename = filename.slice(0, -1);
+      }
+      return filename;
+    }
+  } else {
+    // For web, filepath is already just the filename
+    return filepath;
+  }
+};
+
+// Helper function to get a displayable webview path for a file
+const getWebviewPathForFile = async (filePath: string, directory: Directory = Directory.Data): Promise<string> => {
+  if (isPlatform('hybrid')) {
+    // For hybrid platforms, convert file path to HTTP
+    // Check if the path is already a full URI (begins with file://)
+    if (filePath.startsWith('file://')) {
+      // Path is already a full URI
+      return Capacitor.convertFileSrc(filePath);
+    } else {
+      // Try to read the file using Filesystem API to make sure it exists
+      try {
+        await Filesystem.stat({
+          path: filePath,
+          directory: directory
+        });
+        
+        // Get the full URI for the file
+        const fileInfo = await Filesystem.getUri({
+          path: filePath,
+          directory: directory
+        });
+        
+        return Capacitor.convertFileSrc(fileInfo.uri);
+      } catch (error) {
+        console.error(`Failed to get URI for file ${filePath}:`, error);
+        throw error;
+      }
+    }
+  } else {
+    // For web platform, read as base64 data
+    const file = await Filesystem.readFile({
+      path: filePath,
+      directory: directory
+    });
+    return `data:image/jpeg;base64,${file.data}`;
+  }
+};
+
 export function usePhotoGallery() {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [scannedCodes, setScannedCodes] = useState<ScannedCodes>({
@@ -123,6 +192,85 @@ export function usePhotoGallery() {
     
     setPhotos(newPhotos);
     Preferences.set({key: PHOTO_STORAGE, value: JSON.stringify(newPhotos)});
+  };
+
+  // Get file details for original and main photo
+  const getOriginalPhotoFileDetails = (photo: UserPhoto): { originalFilePath: string, mainFileName: string, originalFileName: string } => {
+    const mainFileName = extractFilename(photo.filepath);
+    // Create the original filename by inserting '_original' before the extension
+    const lastDotIndex = mainFileName.lastIndexOf('.');
+    let originalFileName = '';
+    if (lastDotIndex !== -1) {
+      originalFileName = mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex);
+    } else {
+      originalFileName = mainFileName + '_original';
+    }
+    
+    let originalFilePath: string;
+    if (isPlatform('hybrid')) {
+      // For hybrid, replace the main filename with the original filename in the full path
+      originalFilePath = photo.filepath.replace(mainFileName, originalFileName);
+    } else {
+      // For web, just the filename
+      originalFilePath = originalFileName;
+    }
+    
+    return { originalFilePath, mainFileName, originalFileName };
+  };
+  
+  // Get or create original image for cropping
+  const getOrCreateOriginalForCrop = async (photo: UserPhoto): Promise<string> => {
+    try {
+      const { originalFilePath, mainFileName, originalFileName } = getOriginalPhotoFileDetails(photo);
+      
+      // Check if original file exists
+      let originalExists = false;
+      try {
+        await Filesystem.stat({
+          path: originalFileName,
+          directory: Directory.Data
+        });
+        originalExists = true;
+      } catch (e) {
+        // File doesn't exist, we'll create it
+        originalExists = false;
+      }
+      
+      // If original doesn't exist, create it by copying the main file
+      if (!originalExists) {
+        console.log(`Creating original file: ${originalFileName} from ${mainFileName}`);
+        
+        // First, read the main file
+        const mainFile = await Filesystem.readFile({
+          path: mainFileName,
+          directory: Directory.Data
+        });
+        
+        // Write it to the original filename and capture the URI from the result
+        const writeResult = await Filesystem.writeFile({
+          path: originalFileName,
+          data: mainFile.data as string,
+          directory: Directory.Data
+        });
+        
+        // For hybrid platforms, use the URI from the write result
+        if (isPlatform('hybrid') && writeResult.uri) {
+          console.log(`Original file created with URI: ${writeResult.uri}`);
+          // Remove any trailing slash that might cause issues
+          const cleanUri = writeResult.uri.endsWith('/') ? 
+            writeResult.uri.slice(0, -1) : writeResult.uri;
+          return Capacitor.convertFileSrc(cleanUri);
+        }
+      } else {
+        console.log(`Original file already exists: ${originalFileName}`);
+      }
+      
+      // Return the webview path for the original image
+      return await getWebviewPathForFile(originalFileName);
+    } catch (error) {
+      console.error('Error getting or creating original for crop:', error);
+      throw error;
+    }
   };
 
   const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
@@ -554,80 +702,63 @@ export function usePhotoGallery() {
   };
 
   // Save cropped photo - replace original with cropped version
-  const saveCroppedPhoto = async (originalPhoto: UserPhoto, croppedImageBase64: string): Promise<void> => {
+  const saveCroppedPhoto = async (photoToUpdate: UserPhoto, croppedImageBase64: string): Promise<void> => {
     try {
-      // Get the base64 data without the prefix if it has a data URL format
-      const base64Data = croppedImageBase64.includes('base64,') ? 
-        croppedImageBase64.split('base64,')[1] : croppedImageBase64;
+      // Convert base64 string (from cutting data:image/jpeg;base64,)
+      const base64Data = croppedImageBase64.split(',')[1];
       
-      // Determine filename from the original photo
-      let filename: string;
-      if (isPlatform('hybrid')) {
-        // For hybrid platforms, extract filename from filepath
-        filename = originalPhoto.fileName || originalPhoto.filepath.split('/').pop() || 'cropped.jpeg';
-      } else {
-        // For web platform, use filepath directly as it's already the filename
-        filename = originalPhoto.filepath;
-      }
+      // Extract the filename from the filepath
+      const filename = extractFilename(photoToUpdate.filepath);
       
-      console.log(`Saving cropped photo as: ${filename}`);
+      console.log(`Saving cropped photo to: ${filename}`);
       
-      // Save the cropped image, overwriting the original
-      const result = await Filesystem.writeFile({
+      // Write the cropped image to disk, replacing the main image
+      const savedFile = await Filesystem.writeFile({
         path: filename,
         data: base64Data,
         directory: Directory.Data
       });
       
-      // Create a webviewPath for the cropped image
-      let webviewPath: string;
-      if (isPlatform('hybrid')) {
-        // For hybrid platforms
-        webviewPath = Capacitor.convertFileSrc(result.uri);
-      } else {
-        // For web platform
-        webviewPath = `data:image/jpeg;base64,${base64Data}`;
-      }
-      
-      // Update the photo in the photos array
+      // Update the webviewPath with cache busting
       const updatedPhotos = photos.map(p => {
-        if (p.filepath === originalPhoto.filepath) {
-          return {
-            ...p,
-            webviewPath: webviewPath
-          };
+        if (p.filepath === photoToUpdate.filepath) {
+          // Add a timestamp to bust the cache
+          let newWebviewPath: string;
+          if (isPlatform('hybrid')) {
+            newWebviewPath = Capacitor.convertFileSrc(p.filepath);
+          } else {
+            // Use the new base64 data directly
+            newWebviewPath = croppedImageBase64;
+          }
+          // Add a timestamp query parameter to force refresh
+          return { ...p, webviewPath: newWebviewPath + '?t=' + new Date().getTime() };
         }
         return p;
       });
       
-      // Update state and storage
       setPhotos(updatedPhotos);
-      await Preferences.set({
-        key: PHOTO_STORAGE,
-        value: JSON.stringify(updatedPhotos)
-      });
-      
-      console.log('Photo cropped and saved successfully');
+      await Preferences.set({key: PHOTO_STORAGE, value: JSON.stringify(updatedPhotos)});
     } catch (error) {
-      console.error('Error saving cropped photo:', error);
+      console.error('Failed to save cropped photo', error);
       throw error;
     }
   };
 
   return {
+    deletePhoto,
     photos,
     scannedCodes,
     processScannedCode,
     hasValidSku,
     takePhoto,
     pickImages,
-    deletePhoto,
     saveCroppedPhoto,
     uploadPhotos,
-    clearPhotos,
     isUploading,
     uploadStatus,
     hideUploadStatus,
-    loadSaved // Add loadSaved to make it available in the context
+    clearPhotos,
+    loadSaved,
+    getOrCreateOriginalForCrop  // Expose the new function
   };
 }
