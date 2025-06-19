@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { detectAndValidateCode, BarcodeResult } from '../services/barcodeService';
 import { isPlatform } from '@ionic/react';
 import { Camera, CameraResultType, CameraSource, Photo, GalleryPhoto, GalleryPhotos } from '@capacitor/camera';
 import { Filesystem, Directory, FilesystemEncoding } from '@capacitor/filesystem';
@@ -16,11 +17,25 @@ export interface UploadStatus {
   show: boolean;
 }
 
+export interface ScannedCodes {
+  sku: string | null;
+  ean: string | null;
+  upc: string | null;
+  isbn: string | null;
+  lastScanResult: BarcodeResult | null;
+}
+
 const PHOTO_STORAGE = 'photos';
 
 export function usePhotoGallery() {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
-  const [scannedSku, setScannedSku] = useState<string | null>(null);
+  const [scannedCodes, setScannedCodes] = useState<ScannedCodes>({
+    sku: null,
+    ean: null,
+    upc: null,
+    isbn: null,
+    lastScanResult: null
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     message: '',
@@ -329,10 +344,16 @@ export function usePhotoGallery() {
 
   const clearPhotos = async () => {
     try {
-      console.log('Clearing photo session and scanned SKU...');
+      console.log('Clearing photo session and all scanned codes...');
       
-      // Reset the scanned SKU
-      setScannedSku(null);
+      // Reset all scanned codes
+      setScannedCodes({
+        sku: null,
+        ean: null,
+        upc: null,
+        isbn: null,
+        lastScanResult: null
+      });
       
       // Delete all photo files from filesystem
       for (const photo of photos) {
@@ -378,7 +399,7 @@ export function usePhotoGallery() {
     }
   };
 
-  const uploadPhotos = async (sku?: string) => {
+  const uploadPhotos = async () => {
     if (photos.length === 0) {
       setUploadStatus({
         message: 'No photos to upload',
@@ -395,9 +416,20 @@ export function usePhotoGallery() {
       console.log('Starting photo upload process...');
       
       const formData = new FormData();
-      // Use provided SKU or fallback to hardcoded value
-      formData.append('sku', sku || 'IOS-Test1');
+      // Use detected SKU or fallback to hardcoded value
+      formData.append('sku', scannedCodes.sku || 'IOS-Test1');
       formData.append('debug', 'true');
+      
+      // Add other code types if available
+      if (scannedCodes.ean) {
+        formData.append('ean', scannedCodes.ean);
+      }
+      if (scannedCodes.upc) {
+        formData.append('upc', scannedCodes.upc);
+      }
+      if (scannedCodes.isbn) {
+        formData.append('isbn', scannedCodes.isbn);
+      }
       
       // Process each photo and add to FormData
       for (let i = 0; i < photos.length; i++) {
@@ -461,20 +493,57 @@ export function usePhotoGallery() {
     setUploadStatus(prev => ({ ...prev, show: false }));
   };
 
-  // Validate SKU format using regex
-  const validateSkuFormat = (sku: string | null): boolean => {
-    if (!sku) return false;
+  /**
+   * Processes a scanned code, detects its type, and updates the appropriate state
+   */
+  const processScannedCode = (scannedCode: string) => {
+    if (!scannedCode) return;
     
-    // Validate that SKU is less than 11 characters
-    const skuRegex = /^.{1,10}$/;
-    return skuRegex.test(sku);
+    const result = detectAndValidateCode(scannedCode);
+    console.log(`Processed code: ${scannedCode}, detected as ${result.type}, valid: ${result.valid}`);
+    
+    // Update the appropriate code type in the state
+    const updatedCodes = { ...scannedCodes, lastScanResult: result };
+    
+    switch (result.type) {
+      case 'SKU':
+        if (result.valid) {
+          updatedCodes.sku = result.code;
+        }
+        break;
+      case 'EAN-13':
+        if (result.valid) {
+          updatedCodes.ean = result.code;
+        }
+        break;
+      case 'UPC':
+        if (result.valid) {
+          updatedCodes.upc = result.code;
+        }
+        break;
+      case 'ISBN-10':
+      case 'ISBN-13':
+        if (result.valid) {
+          updatedCodes.isbn = result.code;
+        }
+        break;
+    }
+    
+    setScannedCodes(updatedCodes);
+  };
+  
+  /**
+   * Check if we have a valid SKU for upload
+   */
+  const hasValidSku = (): boolean => {
+    return !!scannedCodes.sku;
   };
 
   return {
     photos,
-    scannedSku,
-    setScannedSku,
-    validateSkuFormat,
+    scannedCodes,
+    processScannedCode,
+    hasValidSku,
     takePhoto,
     pickImages,
     deletePhoto,

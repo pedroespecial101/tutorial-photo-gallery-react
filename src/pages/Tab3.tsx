@@ -1,5 +1,5 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonImg, IonButton, IonToast, IonLoading, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonIcon, IonChip, IonLabel, IonText, IonItem, IonNote } from '@ionic/react';
-import { checkmarkCircleOutline, alertCircleOutline, scanOutline } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonImg, IonButton, IonToast, IonLoading, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonIcon, IonChip, IonLabel, IonText, IonItem, IonNote, IonList, IonItemDivider } from '@ionic/react';
+import { checkmarkCircleOutline, alertCircleOutline, scanOutline, barcodeOutline, basketOutline, bookOutline } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import { Directory, Filesystem } from '@capacitor/filesystem';
@@ -8,7 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import './Tab3.css';
 
 const Tab3: React.FC = () => {
-  const { photos, uploadPhotos, isUploading, uploadStatus, hideUploadStatus, scannedSku, validateSkuFormat } = usePhotoGalleryContext();
+  const { photos, uploadPhotos, isUploading, uploadStatus, hideUploadStatus, scannedCodes, hasValidSku } = usePhotoGalleryContext();
   
   // Debug state variables
   const [debugInfo, setDebugInfo] = useState<{
@@ -110,35 +110,77 @@ const Tab3: React.FC = () => {
         </IonHeader>
         
         <div className="ion-padding">
-          {/* SKU Status Information */}
+          {/* Barcode Information */}
           <IonCard className="ion-margin-bottom">
             <IonCardHeader>
-              <IonCardTitle>SKU Information</IonCardTitle>
+              <IonCardTitle>Barcode Information</IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
-              {scannedSku ? (
-                <div>
-                  <IonItem lines="none">
-                    <IonLabel>Current SKU:</IonLabel>
-                    <IonChip slot="end" color={validateSkuFormat(scannedSku) ? "success" : "warning"}>
-                      <IonIcon icon={validateSkuFormat(scannedSku) ? checkmarkCircleOutline : alertCircleOutline} />
-                      <IonLabel>{scannedSku}</IonLabel>
+              <IonList>
+                <IonItemDivider color="light">Required for Upload</IonItemDivider>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={barcodeOutline} color="primary" />
+                  <IonLabel>SKU</IonLabel>
+                  {scannedCodes.sku ? (
+                    <IonChip slot="end" color="success">
+                      <IonIcon icon={checkmarkCircleOutline} />
+                      <IonLabel>{scannedCodes.sku}</IonLabel>
                     </IonChip>
-                  </IonItem>
-                  
-                  {!validateSkuFormat(scannedSku) && (
-                    <IonText color="warning">
-                      <p>Invalid SKU format. The SKU must be less than 10 characters.</p>
-                    </IonText>
+                  ) : (
+                    <IonChip slot="end" color="warning">
+                      <IonIcon icon={alertCircleOutline} />
+                      <IonLabel>Missing</IonLabel>
+                    </IonChip>
                   )}
-                </div>
-              ) : (
-                <div>
-                  <IonItem lines="none">
-                    <IonLabel>No SKU scanned</IonLabel>
-                    <IonIcon color="medium" icon={scanOutline} slot="end" />
-                  </IonItem>
-                  <IonNote className="ion-padding-start">Please scan a barcode in the Scanner tab first.</IonNote>
+                </IonItem>
+                
+                <IonItemDivider color="light">Additional Codes (Optional)</IonItemDivider>
+                
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={basketOutline} color="tertiary" />
+                  <IonLabel>EAN-13</IonLabel>
+                  {scannedCodes.ean ? (
+                    <IonChip slot="end" color="success">
+                      <IonIcon icon={checkmarkCircleOutline} />
+                      <IonLabel>{scannedCodes.ean}</IonLabel>
+                    </IonChip>
+                  ) : (
+                    <IonText color="medium" slot="end">None</IonText>
+                  )}
+                </IonItem>
+                
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={basketOutline} color="secondary" />
+                  <IonLabel>UPC</IonLabel>
+                  {scannedCodes.upc ? (
+                    <IonChip slot="end" color="success">
+                      <IonIcon icon={checkmarkCircleOutline} />
+                      <IonLabel>{scannedCodes.upc}</IonLabel>
+                    </IonChip>
+                  ) : (
+                    <IonText color="medium" slot="end">None</IonText>
+                  )}
+                </IonItem>
+                
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={bookOutline} color="dark" />
+                  <IonLabel>ISBN</IonLabel>
+                  {scannedCodes.isbn ? (
+                    <IonChip slot="end" color="success">
+                      <IonIcon icon={checkmarkCircleOutline} />
+                      <IonLabel>{scannedCodes.isbn}</IonLabel>
+                    </IonChip>
+                  ) : (
+                    <IonText color="medium" slot="end">None</IonText>
+                  )}
+                </IonItem>
+              </IonList>
+              
+              {!hasValidSku() && (
+                <div className="ion-padding-top">
+                  <IonText color="warning">
+                    <p><IonIcon icon={alertCircleOutline} /> Please scan a valid SKU in the Scanner tab before uploading.</p>
+                  </IonText>
                 </div>
               )}
             </IonCardContent>
@@ -146,8 +188,8 @@ const Tab3: React.FC = () => {
           
           <IonButton 
             expand="block" 
-            onClick={() => uploadPhotos(scannedSku || undefined)} 
-            disabled={photos.length === 0 || isUploading || !scannedSku || !validateSkuFormat(scannedSku)}
+            onClick={() => uploadPhotos()} 
+            disabled={photos.length === 0 || isUploading || !hasValidSku()}
           >
             Upload Photos to API
           </IonButton>
@@ -156,14 +198,9 @@ const Tab3: React.FC = () => {
             {photos.length === 0 ? 
               'No photos available. Take photos in Tab 2 first.' : 
               `${photos.length} photo(s) available for upload`}
-            {photos.length > 0 && !scannedSku && (
+            {photos.length > 0 && !hasValidSku() && (
               <IonText color="medium">
                 <p>A valid SKU is required before uploading.</p>
-              </IonText>
-            )}
-            {photos.length > 0 && scannedSku && !validateSkuFormat(scannedSku) && (
-              <IonText color="warning">
-                <p>The scanned SKU is not valid for upload.</p>
               </IonText>
             )}
           </p>

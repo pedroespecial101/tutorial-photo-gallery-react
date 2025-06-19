@@ -1,15 +1,15 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { usePhotoGallery, UserPhoto, UploadStatus } from '../hooks/usePhotoGallery';
+import { usePhotoGallery, UserPhoto, UploadStatus, ScannedCodes } from '../hooks/usePhotoGallery';
 
 interface PhotoGalleryContextType {
   photos: UserPhoto[];
-  scannedSku: string | null;
-  setScannedSku: (sku: string | null) => void;
-  validateSkuFormat: (sku: string | null) => boolean;
+  scannedCodes: ScannedCodes;
+  processScannedCode: (scannedCode: string) => void;
+  hasValidSku: () => boolean;
   takePhoto: () => Promise<void>;
   pickImages: () => Promise<void>;
   deletePhoto: (photo: UserPhoto) => Promise<void>;
-  uploadPhotos: (sku?: string) => Promise<void>;
+  uploadPhotos: () => Promise<void>;
   clearPhotos: () => Promise<void>;
   isUploading: boolean;
   uploadStatus: UploadStatus;

@@ -1,21 +1,21 @@
 import React, { useEffect } from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon, IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCardContent, IonText, IonFab, IonFabButton, IonBadge, IonChip, IonLabel } from '@ionic/react';
-import { scanOutline, checkmarkCircleOutline, alertCircleOutline } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon, IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCardContent, IonText, IonFab, IonFabButton, IonBadge, IonChip, IonLabel, IonList, IonItem, IonItemDivider } from '@ionic/react';
+import { scanOutline, checkmarkCircleOutline, alertCircleOutline, barcodeOutline, documentOutline, bookOutline, basketOutline } from 'ionicons/icons';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import './Tab1.css';
 
 const Tab1: React.FC = () => {
   const { scanResult, startScan } = useBarcodeScanner();
-  const { setScannedSku, scannedSku, validateSkuFormat } = usePhotoGalleryContext();
+  const { processScannedCode, scannedCodes, hasValidSku } = usePhotoGalleryContext();
   
-  // When a barcode is scanned, update the shared state
+  // When a barcode is scanned, process it to detect its type
   useEffect(() => {
     if (scanResult) {
-      setScannedSku(scanResult.content);
-      console.log('Barcode scanned and saved to shared state:', scanResult.content);
+      processScannedCode(scanResult.content);
+      console.log('Barcode scanned and processed:', scanResult.content);
     }
-  }, [scanResult, setScannedSku]);
+  }, [scanResult, processScannedCode]);
 
   return (
     <IonPage>
@@ -31,30 +31,83 @@ const Tab1: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         
-        {/* Current Stored SKU Status */}
+        {/* Current Scanned Codes Status */}
         <IonCard className="ion-margin-bottom">
           <IonCardHeader>
-            <IonCardSubtitle>Current SKU Status</IonCardSubtitle>
-            <IonCardTitle>Storage</IonCardTitle>
+            <IonCardSubtitle>Current Session</IonCardSubtitle>
+            <IonCardTitle>Identified Codes</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
-            {scannedSku ? (
-              <div>
-                <IonChip color={validateSkuFormat(scannedSku) ? "success" : "warning"}>
-                  <IonIcon icon={validateSkuFormat(scannedSku) ? checkmarkCircleOutline : alertCircleOutline} />
-                  <IonLabel>{scannedSku}</IonLabel>
-                </IonChip>
-                {!validateSkuFormat(scannedSku) && (
-                  <IonText color="warning">
-                    <p>Note: This SKU is not valid for upload (must be less than 10 characters).</p>
-                  </IonText>
+            <IonList>
+              {/* SKU */}
+              <IonItem lines="full">
+                <IonIcon slot="start" icon={barcodeOutline} color="primary" />
+                <IonLabel>SKU</IonLabel>
+                {scannedCodes.sku ? (
+                  <IonChip slot="end" color="success">
+                    <IonIcon icon={checkmarkCircleOutline} />
+                    <IonLabel>{scannedCodes.sku}</IonLabel>
+                  </IonChip>
+                ) : (
+                  <IonText color="medium" slot="end">Not scanned</IonText>
                 )}
-              </div>
-            ) : (
-              <IonText color="medium">
-                <p>No SKU stored. Scan a barcode first.</p>
-              </IonText>
-            )}
+              </IonItem>
+
+              {/* EAN */}
+              <IonItem lines="full">
+                <IonIcon slot="start" icon={basketOutline} color="tertiary" />
+                <IonLabel>EAN-13</IonLabel>
+                {scannedCodes.ean ? (
+                  <IonChip slot="end" color="success">
+                    <IonIcon icon={checkmarkCircleOutline} />
+                    <IonLabel>{scannedCodes.ean}</IonLabel>
+                  </IonChip>
+                ) : (
+                  <IonText color="medium" slot="end">Not scanned</IonText>
+                )}
+              </IonItem>
+
+              {/* UPC */}
+              <IonItem lines="full">
+                <IonIcon slot="start" icon={basketOutline} color="secondary" />
+                <IonLabel>UPC</IonLabel>
+                {scannedCodes.upc ? (
+                  <IonChip slot="end" color="success">
+                    <IonIcon icon={checkmarkCircleOutline} />
+                    <IonLabel>{scannedCodes.upc}</IonLabel>
+                  </IonChip>
+                ) : (
+                  <IonText color="medium" slot="end">Not scanned</IonText>
+                )}
+              </IonItem>
+
+              {/* ISBN */}
+              <IonItem lines="full">
+                <IonIcon slot="start" icon={bookOutline} color="dark" />
+                <IonLabel>ISBN</IonLabel>
+                {scannedCodes.isbn ? (
+                  <IonChip slot="end" color="success">
+                    <IonIcon icon={checkmarkCircleOutline} />
+                    <IonLabel>{scannedCodes.isbn}</IonLabel>
+                  </IonChip>
+                ) : (
+                  <IonText color="medium" slot="end">Not scanned</IonText>
+                )}
+              </IonItem>
+            </IonList>
+
+            {/* Upload status indicator */}
+            <div className="ion-padding-top ion-text-center">
+              {hasValidSku() ? (
+                <IonText color="success">
+                  <p><IonIcon icon={checkmarkCircleOutline} /> Ready for upload</p>
+                </IonText>
+              ) : (
+                <IonText color="warning">
+                  <p><IonIcon icon={alertCircleOutline} /> Need valid SKU for upload</p>
+                </IonText>
+              )}
+            </div>
           </IonCardContent>
         </IonCard>
 
@@ -62,8 +115,10 @@ const Tab1: React.FC = () => {
         {scanResult ? (
           <IonCard>
             <IonCardHeader>
-              <IonCardSubtitle>Scan Result</IonCardSubtitle>
-              <IonCardTitle>Barcode Content</IonCardTitle>
+              <IonCardSubtitle>Last Scan Result</IonCardSubtitle>
+              <IonCardTitle>
+                {scannedCodes.lastScanResult?.type || 'Barcode'}
+              </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <IonText>
@@ -72,6 +127,13 @@ const Tab1: React.FC = () => {
               <IonText color="medium">
                 <p>Scanned at: {new Date(scanResult.timestamp).toLocaleString()}</p>
               </IonText>
+              
+              {scannedCodes.lastScanResult && (
+                <IonChip color={scannedCodes.lastScanResult.valid ? "success" : "danger"}>
+                  <IonIcon icon={scannedCodes.lastScanResult.valid ? checkmarkCircleOutline : alertCircleOutline} />
+                  <IonLabel>{scannedCodes.lastScanResult.valid ? 'Valid' : 'Invalid'} {scannedCodes.lastScanResult.type}</IonLabel>
+                </IonChip>
+              )}
             </IonCardContent>
           </IonCard>
         ) : (
