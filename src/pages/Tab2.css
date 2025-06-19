@@ -1,18 +1,66 @@
 .large-fab-button {
-    --width: 70px;
-    --height: 70px;
-    --border-radius: 35px;
-  }
-  
-  .large-fab-button ion-icon {
-    font-size: 28px;
-  }
-  
-  /* Adjust positioning to center the pair */
-  .gallery-fab {
-    --offset-bottom: 20px;
-    --offset-horizontal: calc(50% - 45px); /* Adjust based on button size + spacing */
-  }
+  width: 65px;
+  height: 65px;
+  --border-radius: 50%;
+}
+
+.large-fab-button ion-icon {
+  font-size: 28px;
+}
+
+/* Photo container with delete button */
+.photo-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.photo-container ion-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  height: 30px;
+  width: 30px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --box-shadow: none;
+  z-index: 10;
+  opacity: 0.8;
+}
+
+.delete-button ion-icon {
+  font-size: 18px;
+  color: white;
+  background-color: rgba(219, 68, 55, 0.8);
+  border-radius: 50%;
+  padding: 4px;
+}
+
+.gallery-fab {
+  margin-bottom: 10px;
+  margin-left: 10px;
+  --offset-bottom: 20px;
+  --offset-horizontal: calc(50% - 45px); /* Adjust based on button size + spacing */
+}
+
+.camera-fab {
+  margin-bottom: 10px;
+  margin-right: 10px;
+  --offset-bottom: 20px;
+  --offset-horizontal: calc(50% + 45px); /* Adjust based on button size + spacing */
+}
   
   .camera-fab {
     --offset-bottom: 20px;

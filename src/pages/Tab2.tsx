@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonActionSheet, IonFabList } from '@ionic/react';
-import { camera, trash, close, images } from 'ionicons/icons';
+import React from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonButton } from '@ionic/react';
+import { camera, trash, images } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import { UserPhoto } from '../hooks/usePhotoGallery';
 import './Tab2.css';
 
 const Tab2: React.FC = () => {
   const { deletePhoto, photos, takePhoto, pickImages } = usePhotoGalleryContext();
-  const [photoToDelete, setPhotoToDelete] = useState<UserPhoto>();
+  const history = useHistory();
+  
+  const handleImageClick = (photo: UserPhoto) => {
+    // Navigate to crop page with the photo
+    history.push({
+      pathname: '/crop',
+      state: { photo }
+    });
+  };
+  
+  const handleDeleteClick = (event: React.MouseEvent, photo: UserPhoto) => {
+    // Stop propagation to prevent triggering the image click
+    event.stopPropagation();
+    deletePhoto(photo);
+  };
 
   return (
     <IonPage>
@@ -26,7 +41,20 @@ const Tab2: React.FC = () => {
           <IonRow>
             {photos.map((photo, index) => (
               <IonCol size="6" key={index}>
-                <IonImg onClick={() => setPhotoToDelete(photo)} src={photo.webviewPath} />
+                <div 
+                  className="photo-container"
+                  onClick={() => handleImageClick(photo)}
+                >
+                  <IonImg src={photo.webviewPath} />
+                  <IonButton 
+                    fill="clear"
+                    color="danger" 
+                    className="delete-button"
+                    onClick={(e) => handleDeleteClick(e, photo)}
+                  >
+                    <IonIcon icon={trash} />
+                  </IonButton>
+                </div>
               </IonCol>
             ))}
           </IonRow>
@@ -56,25 +84,7 @@ const Tab2: React.FC = () => {
 
 
 
-        <IonActionSheet
-          isOpen={!!photoToDelete}
-          buttons={[{
-            text: 'Delete',
-            role: 'destructive',
-            icon: trash,
-            handler: () => {
-              if (photoToDelete) {
-                deletePhoto(photoToDelete);
-                setPhotoToDelete(undefined);
-              }
-            }
-          }, {
-            text: 'Cancel',
-            icon: close,
-            role: 'cancel'
-          }]}
-          onDidDismiss={() => setPhotoToDelete(undefined)}
-        />
+
 
 
       </IonContent>

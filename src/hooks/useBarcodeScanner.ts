@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint, CapacitorBarcodeScannerCameraDirection, CapacitorBarcodeScannerScanOrientation } from '@capacitor/barcode-scanner';
 
 export interface ScanResult {
@@ -42,9 +42,15 @@ export function useBarcodeScanner() {
     }
   };
 
+  // Clear the scan result after it has been processed
+  const clearScanResult = useCallback(() => {
+    setScanResult(null);
+  }, []);
+
   return {
     scanResult,
     hasPermission,
-    startScan
+    startScan,
+    clearScanResult
   };
 }

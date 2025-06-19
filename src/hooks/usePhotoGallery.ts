@@ -9,6 +9,7 @@ import { Capacitor } from '@capacitor/core';
 export interface UserPhoto {
   filepath: string;
   webviewPath?: string;
+  fileName?: string;
 }
 
 export interface UploadStatus {
@@ -355,19 +356,6 @@ export function usePhotoGallery() {
     try {
       console.log('Clearing photo session and all scanned codes...');
       
-      // Reset all scanned codes
-      setScannedCodes({
-        sku: null,
-        ean: null,
-        upc: null,
-        isbn: null,
-        skuDisplay: null,
-        eanDisplay: null,
-        upcDisplay: null,
-        isbnDisplay: null,
-        lastScanResult: null
-      });
-      
       // Delete all photo files from filesystem
       for (const photo of photos) {
         try {
@@ -406,7 +394,20 @@ export function usePhotoGallery() {
       setPhotos([]);
       await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify([]) });
       
-      console.log('Photo session cleared successfully');
+      // Reset all scanned codes AFTER clearing photos to ensure full session reset
+      setScannedCodes({
+        sku: null,
+        ean: null,
+        upc: null,
+        isbn: null,
+        skuDisplay: null,
+        eanDisplay: null,
+        upcDisplay: null,
+        isbnDisplay: null,
+        lastScanResult: null
+      });
+      
+      console.log('Photo session and scanned codes cleared successfully');
     } catch (error) {
       console.error('Error clearing photo session:', error);
     }
@@ -552,6 +553,67 @@ export function usePhotoGallery() {
     return !!scannedCodes.sku;
   };
 
+  // Save cropped photo - replace original with cropped version
+  const saveCroppedPhoto = async (originalPhoto: UserPhoto, croppedImageBase64: string): Promise<void> => {
+    try {
+      // Get the base64 data without the prefix if it has a data URL format
+      const base64Data = croppedImageBase64.includes('base64,') ? 
+        croppedImageBase64.split('base64,')[1] : croppedImageBase64;
+      
+      // Determine filename from the original photo
+      let filename: string;
+      if (isPlatform('hybrid')) {
+        // For hybrid platforms, extract filename from filepath
+        filename = originalPhoto.fileName || originalPhoto.filepath.split('/').pop() || 'cropped.jpeg';
+      } else {
+        // For web platform, use filepath directly as it's already the filename
+        filename = originalPhoto.filepath;
+      }
+      
+      console.log(`Saving cropped photo as: ${filename}`);
+      
+      // Save the cropped image, overwriting the original
+      const result = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Data
+      });
+      
+      // Create a webviewPath for the cropped image
+      let webviewPath: string;
+      if (isPlatform('hybrid')) {
+        // For hybrid platforms
+        webviewPath = Capacitor.convertFileSrc(result.uri);
+      } else {
+        // For web platform
+        webviewPath = `data:image/jpeg;base64,${base64Data}`;
+      }
+      
+      // Update the photo in the photos array
+      const updatedPhotos = photos.map(p => {
+        if (p.filepath === originalPhoto.filepath) {
+          return {
+            ...p,
+            webviewPath: webviewPath
+          };
+        }
+        return p;
+      });
+      
+      // Update state and storage
+      setPhotos(updatedPhotos);
+      await Preferences.set({
+        key: PHOTO_STORAGE,
+        value: JSON.stringify(updatedPhotos)
+      });
+      
+      console.log('Photo cropped and saved successfully');
+    } catch (error) {
+      console.error('Error saving cropped photo:', error);
+      throw error;
+    }
+  };
+
   return {
     photos,
     scannedCodes,
@@ -560,6 +622,7 @@ export function usePhotoGallery() {
     takePhoto,
     pickImages,
     deletePhoto,
+    saveCroppedPhoto,
     uploadPhotos,
     clearPhotos,
     isUploading,

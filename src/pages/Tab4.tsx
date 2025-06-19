@@ -5,14 +5,11 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
-  IonRange,
   IonButton,
   IonModal,
   IonGrid,
   IonRow,
-  IonCol,
-  IonItem,
-  IonLabel
+  IonCol
 } from '@ionic/react';
 import Cropper from 'react-easy-crop';
 import { getCroppedImg } from '../utils/cropImage';
@@ -22,7 +19,6 @@ const dogImg = 'https://img.huffingtonpost.com/asset/5ab4d4ac2000007d06eb2c56.jp
 
 const Tab4: React.FC = () => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
@@ -37,7 +33,7 @@ const Tab4: React.FC = () => {
       const croppedImg = await getCroppedImg(
         dogImg,
         croppedAreaPixels,
-        rotation
+        0 // No rotation
       );
       console.log('Image cropped successfully', { croppedImg });
       setCroppedImage(croppedImg);
@@ -63,46 +59,17 @@ const Tab4: React.FC = () => {
           <Cropper
             image={dogImg}
             crop={crop}
-            rotation={rotation}
             zoom={zoom}
-            aspect={4 / 3}
             onCropChange={setCrop}
-            onRotationChange={setRotation}
-            onCropComplete={onCropComplete}
             onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            aspect={4 / 3}
+            classes={{ containerClassName: 'crop-container' }}
           />
         </div>
         
         <div className="controls">
           <IonGrid>
-            <IonRow>
-              <IonCol>
-                <IonItem className="sliderContainer">
-                  <IonLabel position="stacked" className="sliderLabel">Zoom</IonLabel>
-                  <IonRange
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    value={zoom}
-                    onIonChange={(e) => setZoom(e.detail.value as number)}
-                  />
-                </IonItem>
-              </IonCol>
-            </IonRow>
-            <IonRow>
-              <IonCol>
-                <IonItem className="sliderContainer">
-                  <IonLabel position="stacked" className="sliderLabel">Rotation</IonLabel>
-                  <IonRange
-                    min={0}
-                    max={360}
-                    step={1}
-                    value={rotation}
-                    onIonChange={(e) => setRotation(e.detail.value as number)}
-                  />
-                </IonItem>
-              </IonCol>
-            </IonRow>
             <IonRow>
               <IonCol>
                 <IonButton 

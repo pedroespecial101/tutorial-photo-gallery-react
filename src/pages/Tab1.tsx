@@ -6,7 +6,7 @@ import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import './Tab1.css';
 
 const Tab1: React.FC = () => {
-  const { scanResult, startScan } = useBarcodeScanner();
+  const { scanResult, startScan, clearScanResult } = useBarcodeScanner();
   const { processScannedCode, scannedCodes, hasValidSku } = usePhotoGalleryContext();
   
   // When a barcode is scanned, process it to detect its type
@@ -14,8 +14,10 @@ const Tab1: React.FC = () => {
     if (scanResult) {
       processScannedCode(scanResult.content);
       console.log('Barcode scanned and processed:', scanResult.content);
+      // Clear the scan result after processing to prevent continuous processing
+      clearScanResult();
     }
-  }, [scanResult, processScannedCode]);
+  }, [scanResult, processScannedCode, clearScanResult]);
 
   return (
     <IonPage>

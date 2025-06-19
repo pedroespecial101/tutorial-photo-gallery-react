@@ -9,6 +9,7 @@ interface PhotoGalleryContextType {
   takePhoto: () => Promise<void>;
   pickImages: () => Promise<void>;
   deletePhoto: (photo: UserPhoto) => Promise<void>;
+  saveCroppedPhoto: (originalPhoto: UserPhoto, croppedImageBase64: string) => Promise<void>;
   uploadPhotos: () => Promise<void>;
   clearPhotos: () => Promise<void>;
   isUploading: boolean;
