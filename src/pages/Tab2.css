@@ -1,0 +1,21 @@
+.large-fab-button {
+    --width: 70px;
+    --height: 70px;
+    --border-radius: 35px;
+  }
+  
+  .large-fab-button ion-icon {
+    font-size: 28px;
+  }
+  
+  /* Adjust positioning to center the pair */
+  .gallery-fab {
+    --offset-bottom: 20px;
+    --offset-horizontal: calc(50% - 45px); /* Adjust based on button size + spacing */
+  }
+  
+  .camera-fab {
+    --offset-bottom: 20px;
+    --offset-horizontal: calc(50% + 45px); /* Adjust based on button size + spacing */
+  }
+  
