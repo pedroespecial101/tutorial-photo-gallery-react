@@ -1,5 +1,5 @@
-import React from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonButton } from '@ionic/react';
+import React, { useEffect } from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonButton, useIonViewWillEnter } from '@ionic/react';
 import { camera, trash, images } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
@@ -7,7 +7,15 @@ import { UserPhoto } from '../hooks/usePhotoGallery';
 import './Tab2.css';
 
 const Tab2: React.FC = () => {
-  const { deletePhoto, photos, takePhoto, pickImages } = usePhotoGalleryContext();
+  // Destructure with a function to get the latest photos data
+  const { deletePhoto, photos, takePhoto, pickImages, loadSaved } = usePhotoGalleryContext();
+  
+  // Use Ionic lifecycle hook to refresh photos when view becomes active
+  useIonViewWillEnter(() => {
+    console.log('Tab2: View will enter, refreshing photos');
+    // Reload photos from storage to get the latest data
+    loadSaved();
+  });
   const history = useHistory();
   
   const handleImageClick = (photo: UserPhoto) => {

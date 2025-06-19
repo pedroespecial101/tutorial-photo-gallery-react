@@ -15,6 +15,7 @@ interface PhotoGalleryContextType {
   isUploading: boolean;
   uploadStatus: UploadStatus;
   hideUploadStatus: () => void;
+  loadSaved: () => Promise<void>; // Added to allow refreshing photos
 }
 
 const PhotoGalleryContext = createContext<PhotoGalleryContextType | undefined>(undefined);

@@ -627,6 +627,7 @@ export function usePhotoGallery() {
     clearPhotos,
     isUploading,
     uploadStatus,
-    hideUploadStatus
+    hideUploadStatus,
+    loadSaved // Add loadSaved to make it available in the context
   };
 }
