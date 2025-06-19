@@ -46,7 +46,7 @@ const Tab1: React.FC = () => {
                 {scannedCodes.sku ? (
                   <IonChip slot="end" color="success">
                     <IonIcon icon={checkmarkCircleOutline} />
-                    <IonLabel>{scannedCodes.sku}</IonLabel>
+                    <IonLabel>{scannedCodes.skuDisplay || scannedCodes.sku}</IonLabel>
                   </IonChip>
                 ) : (
                   <IonText color="medium" slot="end">Not scanned</IonText>
@@ -60,7 +60,7 @@ const Tab1: React.FC = () => {
                 {scannedCodes.ean ? (
                   <IonChip slot="end" color="success">
                     <IonIcon icon={checkmarkCircleOutline} />
-                    <IonLabel>{scannedCodes.ean}</IonLabel>
+                    <IonLabel>{scannedCodes.eanDisplay || scannedCodes.ean}</IonLabel>
                   </IonChip>
                 ) : (
                   <IonText color="medium" slot="end">Not scanned</IonText>
@@ -74,7 +74,7 @@ const Tab1: React.FC = () => {
                 {scannedCodes.upc ? (
                   <IonChip slot="end" color="success">
                     <IonIcon icon={checkmarkCircleOutline} />
-                    <IonLabel>{scannedCodes.upc}</IonLabel>
+                    <IonLabel>{scannedCodes.upcDisplay || scannedCodes.upc}</IonLabel>
                   </IonChip>
                 ) : (
                   <IonText color="medium" slot="end">Not scanned</IonText>
@@ -88,7 +88,7 @@ const Tab1: React.FC = () => {
                 {scannedCodes.isbn ? (
                   <IonChip slot="end" color="success">
                     <IonIcon icon={checkmarkCircleOutline} />
-                    <IonLabel>{scannedCodes.isbn}</IonLabel>
+                    <IonLabel>{scannedCodes.isbnDisplay || scannedCodes.isbn}</IonLabel>
                   </IonChip>
                 ) : (
                   <IonText color="medium" slot="end">Not scanned</IonText>

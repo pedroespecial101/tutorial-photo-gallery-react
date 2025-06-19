@@ -19,8 +19,7 @@ export function useBarcodeScanner() {
       const result = await CapacitorBarcodeScanner.scanBarcode({
         hint: CapacitorBarcodeScannerTypeHint.ALL,
         scanInstructions: "Please scan a barcode or QR code",
-        scanButton: true,
-        scanText: "Scan",
+        scanButton: false, // Removed the scan button so scanning starts automatically
         cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
         scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE
       });

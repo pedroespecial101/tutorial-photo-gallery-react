@@ -22,6 +22,11 @@ export interface ScannedCodes {
   ean: string | null;
   upc: string | null;
   isbn: string | null;
+  // Display versions with original formatting
+  skuDisplay: string | null;
+  eanDisplay: string | null;
+  upcDisplay: string | null;
+  isbnDisplay: string | null;
   lastScanResult: BarcodeResult | null;
 }
 
@@ -34,6 +39,10 @@ export function usePhotoGallery() {
     ean: null,
     upc: null,
     isbn: null,
+    skuDisplay: null,
+    eanDisplay: null,
+    upcDisplay: null,
+    isbnDisplay: null,
     lastScanResult: null
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -352,6 +361,10 @@ export function usePhotoGallery() {
         ean: null,
         upc: null,
         isbn: null,
+        skuDisplay: null,
+        eanDisplay: null,
+        upcDisplay: null,
+        isbnDisplay: null,
         lastScanResult: null
       });
       
@@ -499,37 +512,37 @@ export function usePhotoGallery() {
   const processScannedCode = (scannedCode: string) => {
     if (!scannedCode) return;
     
+    // Detect and validate the code
     const result = detectAndValidateCode(scannedCode);
-    console.log(`Processed code: ${scannedCode}, detected as ${result.type}, valid: ${result.valid}`);
+    console.log('Code detection result:', result);
     
-    // Update the appropriate code type in the state
-    const updatedCodes = { ...scannedCodes, lastScanResult: result };
-    
-    switch (result.type) {
-      case 'SKU':
-        if (result.valid) {
-          updatedCodes.sku = result.code;
-        }
-        break;
-      case 'EAN-13':
-        if (result.valid) {
-          updatedCodes.ean = result.code;
-        }
-        break;
-      case 'UPC':
-        if (result.valid) {
-          updatedCodes.upc = result.code;
-        }
-        break;
-      case 'ISBN-10':
-      case 'ISBN-13':
-        if (result.valid) {
-          updatedCodes.isbn = result.code;
-        }
-        break;
-    }
-    
-    setScannedCodes(updatedCodes);
+    // Update the appropriate state based on the detected type
+    setScannedCodes(prev => {
+      const newState = { ...prev, lastScanResult: result };
+      
+      switch (result.type) {
+        case 'SKU':
+          newState.sku = result.valid ? result.code : null;
+          // Use original code format for display (preserve non-alphanumeric characters)
+          newState.skuDisplay = result.valid ? result.originalCode : null;
+          break;
+        case 'EAN-13':
+          newState.ean = result.valid ? result.code : null;
+          newState.eanDisplay = result.valid ? (result.displayCode || result.code) : null;
+          break;
+        case 'UPC':
+          newState.upc = result.valid ? result.code : null;
+          newState.upcDisplay = result.valid ? (result.displayCode || result.code) : null;
+          break;
+        case 'ISBN-10':
+        case 'ISBN-13':
+          newState.isbn = result.valid ? result.code : null;
+          newState.isbnDisplay = result.valid ? (result.displayCode || result.code) : null;
+          break;
+      }
+      
+      return newState;
+    });
   };
   
   /**

@@ -124,7 +124,7 @@ const Tab3: React.FC = () => {
                   {scannedCodes.sku ? (
                     <IonChip slot="end" color="success">
                       <IonIcon icon={checkmarkCircleOutline} />
-                      <IonLabel>{scannedCodes.sku}</IonLabel>
+                      <IonLabel>{scannedCodes.skuDisplay || scannedCodes.sku}</IonLabel>
                     </IonChip>
                   ) : (
                     <IonChip slot="end" color="warning">
@@ -134,46 +134,42 @@ const Tab3: React.FC = () => {
                   )}
                 </IonItem>
                 
-                <IonItemDivider color="light">Additional Codes (Optional)</IonItemDivider>
+                {(scannedCodes.ean || scannedCodes.upc || scannedCodes.isbn) && (
+                  <IonItemDivider color="light">Additional Codes (Optional)</IonItemDivider>
+                )}
                 
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={basketOutline} color="tertiary" />
-                  <IonLabel>EAN-13</IonLabel>
-                  {scannedCodes.ean ? (
+                {scannedCodes.ean && (
+                  <IonItem lines="full">
+                    <IonIcon slot="start" icon={basketOutline} color="tertiary" />
+                    <IonLabel>EAN-13</IonLabel>
                     <IonChip slot="end" color="success">
                       <IonIcon icon={checkmarkCircleOutline} />
-                      <IonLabel>{scannedCodes.ean}</IonLabel>
+                      <IonLabel>{scannedCodes.eanDisplay || scannedCodes.ean}</IonLabel>
                     </IonChip>
-                  ) : (
-                    <IonText color="medium" slot="end">None</IonText>
-                  )}
-                </IonItem>
+                  </IonItem>
+                )}
                 
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={basketOutline} color="secondary" />
-                  <IonLabel>UPC</IonLabel>
-                  {scannedCodes.upc ? (
+                {scannedCodes.upc && (
+                  <IonItem lines="full">
+                    <IonIcon slot="start" icon={basketOutline} color="secondary" />
+                    <IonLabel>UPC</IonLabel>
                     <IonChip slot="end" color="success">
                       <IonIcon icon={checkmarkCircleOutline} />
-                      <IonLabel>{scannedCodes.upc}</IonLabel>
+                      <IonLabel>{scannedCodes.upcDisplay || scannedCodes.upc}</IonLabel>
                     </IonChip>
-                  ) : (
-                    <IonText color="medium" slot="end">None</IonText>
-                  )}
-                </IonItem>
+                  </IonItem>
+                )}
                 
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={bookOutline} color="dark" />
-                  <IonLabel>ISBN</IonLabel>
-                  {scannedCodes.isbn ? (
+                {scannedCodes.isbn && (
+                  <IonItem lines="full">
+                    <IonIcon slot="start" icon={bookOutline} color="dark" />
+                    <IonLabel>ISBN</IonLabel>
                     <IonChip slot="end" color="success">
                       <IonIcon icon={checkmarkCircleOutline} />
-                      <IonLabel>{scannedCodes.isbn}</IonLabel>
+                      <IonLabel>{scannedCodes.isbnDisplay || scannedCodes.isbn}</IonLabel>
                     </IonChip>
-                  ) : (
-                    <IonText color="medium" slot="end">None</IonText>
-                  )}
-                </IonItem>
+                  </IonItem>
+                )}
               </IonList>
               
               {!hasValidSku() && (
