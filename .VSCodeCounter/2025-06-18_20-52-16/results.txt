@@ -1,0 +1,49 @@
+Date : 2025-06-18 20:52:16
+Directory : /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src
+Total : 17 files,  980 codes, 104 comments, 179 blanks, all 1263 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| TypeScript JSX |          8 |        396 |         12 |         57 |        465 |
+| TypeScript     |          4 |        372 |         63 |         77 |        512 |
+| CSS            |          5 |        212 |         29 |         45 |        286 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                  | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                     |         17 |        980 |        104 |        179 |      1,263 |
+| . (Files)                                                                                             |          5 |         95 |         10 |         13 |        118 |
+| components                                                                                            |          2 |         34 |          0 |          7 |         41 |
+| contexts                                                                                              |          1 |         31 |          0 |          7 |         38 |
+| hooks                                                                                                 |          2 |        364 |         57 |         74 |        495 |
+| pages                                                                                                 |          6 |        280 |         13 |         41 |        334 |
+| theme                                                                                                 |          1 |        176 |         24 |         37 |        237 |
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                                                              | language       | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/App.test.tsx                     | TypeScript JSX |          7 |          0 |          2 |          9 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/App.tsx                          | TypeScript JSX |         68 |          4 |          8 |         80 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/components/ExploreContainer.css  | CSS            |         21 |          0 |          3 |         24 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/components/ExploreContainer.tsx  | TypeScript JSX |         13 |          0 |          4 |         17 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/contexts/PhotoGalleryContext.tsx | TypeScript JSX |         31 |          0 |          7 |         38 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/hooks/useBarcodeScanner.ts       | TypeScript     |         40 |          5 |          7 |         52 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/hooks/usePhotoGallery.ts         | TypeScript     |        324 |         52 |         67 |        443 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/main.tsx                         | TypeScript JSX |         12 |          0 |          0 |         12 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab1.css                   | CSS            |         15 |          5 |          3 |         23 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab1.tsx                   | TypeScript JSX |         50 |          0 |          6 |         56 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab2.css                   | CSS            |          0 |          0 |          1 |          1 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab2.tsx                   | TypeScript JSX |         59 |          0 |          8 |         67 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab3.css                   | CSS            |          0 |          0 |          1 |          1 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab3.tsx                   | TypeScript JSX |        156 |          8 |         22 |        186 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/setupTests.ts                    | TypeScript     |          8 |          5 |          2 |         15 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/theme/variables.css              | CSS            |        176 |         24 |         37 |        237 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/vite-env.d.ts                    | TypeScript     |          0 |          1 |          1 |          2 |
+| Total                                                                                                 |                |        980 |        104 |        179 |      1,263 |
++-------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+

@@ -1,35 +1,109 @@
-# Build Your First Ionic App: Photo Gallery (Ionic React and Capacitor)
+# Ionic React Multi-Function App
 
-Get started with Ionic by building a photo gallery app that runs on iOS, Android, and the web - with just one codebase. This is the complete project referenced in the ["Your First App: React" guide](https://ionicframework.com/docs/react/your-first-app). Follow along to create a complete CRUD (create-read-update-delete) experience.
+## Overview
 
-Powered by [Ionic React](https://ionicframework.com/docs/react) (web app) and [Capacitor](https://capacitor.ionicframework.com) (native app runtime).
+This is an Ionic React application that has been repurposed to include three main functionalities:
 
-## How It Works
+1. **2D Barcode Scanning**: Scan and display 2D barcodes using the device camera
+2. **Photo Capture**: Take photos using the device camera and store them locally
+3. **Image Upload**: Upload captured photos to a FastAPI endpoint with a fixed SKU identifier
 
-After the user navigates to Tab 2 (Photos), they can tap/click on the camera button to open up the device's camera. After taking or selecting a photo, it's stored permanently into the device's filesystem. When the user reopens the app at a later time, the photo images are loaded from the filesystem and displayed again in the gallery. The user can tap on a photo to be presented with the option to remove the photo.
+## Technical Architecture
 
-## Feature Overview
-* App framework: [React](https://reactjs.org/)
-* UI components: [Ionic Framework](https://ionicframework.com/docs/components)
-  * Camera button: [Floating Action Button (FAB)](https://ionicframework.com/docs/api/fab)
-  * Photo Gallery display: [Grid](https://ionicframework.com/docs/api/grid)
-  * Delete Photo dialog: [Action Sheet](https://ionicframework.com/docs/api/action-sheet) 
-* Native runtime: [Capacitor](https://capacitor.ionicframework.com)
-  * Taking photos: [Camera API](https://capacitor.ionicframework.com/docs/apis/camera)
-  * Writing photo to the filesystem: [Filesystem API](https://capacitor.ionicframework.com/docs/apis/filesystem)
-  * Storing photo gallery metadata: [Preferences API](https://capacitor.ionicframework.com/docs/apis/preferences)
+### Application Structure
 
-## Project Structure
-* Tab2 (Photos) (`src/pages/Tab2.tsx`): Photo Gallery UI and basic logic.
-* usePhotoGallery Hook (`src/hooks/usePhotoGallery.ts`): Logic encapsulating Capacitor APIs, including Camera, Filesystem, and Preferences.
+The application is built using Ionic React with TypeScript and follows this structure:
 
-## How to Run
+```
+src/
+├── App.tsx                  # Main application component with routing and tab setup
+├── components/              # Reusable UI components (currently none in active use)
+├── contexts/
+│   └── PhotoGalleryContext.tsx  # Context for sharing photo functionality across components
+├── hooks/
+│   ├── useBarcodeScanner.ts     # Custom hook for barcode scanning functionality
+│   └── usePhotoGallery.ts       # Custom hook for camera and photo management
+└── pages/
+    ├── Tab1.tsx            # Barcode scanning interface
+    ├── Tab2.tsx            # Photo gallery and capture interface
+    └── Tab3.tsx            # Image upload interface
+```
 
-> Note: It's highly recommended to follow along with the [tutorial guide](https://ionicframework.com/docs/react/your-first-app), which goes into more depth, but this is the fastest way to run the app. 
+### Key Components and Functionality
 
-0) Install Ionic if needed: `npm install -g @ionic/cli`.
-1) Clone this repository.
-2) In a terminal, change directory into the repo: `cd photo-gallery-capacitor-react`.
-3) Install all packages: `npm install`.
-4) Run on the web: `ionic serve`.
-5) Run on iOS or Android: See [here](https://ionicframework.com/docs/building/running).
+#### Tab 1: Barcode Scanning
+- Utilizes the Capacitor Barcode Scanner plugin
+- Provides a UI to initiate barcode scanning
+- Displays the scan results (content and timestamp)
+- Implementation is encapsulated in the `useBarcodeScanner` hook
+
+#### Tab 2: Photo Gallery
+- Uses Capacitor Camera plugin to capture photos
+- Displays photos in a grid layout
+- Allows deletion of individual photos
+- Stores photos in the device's filesystem
+- Handles both web and native platform differences
+
+#### Tab 3: Image Upload
+- Lists all available photos captured in Tab 2
+- Provides a button to upload photos to a FastAPI endpoint
+- Currently uses a fixed SKU ("IOS-Test1") for categorization
+- Includes debug information to assist with troubleshooting
+- Handles platform-specific file paths and data conversion
+
+### Data Flow
+
+1. **Photo Capture Flow**:
+   - User captures photo in Tab 2
+   - Photo is saved to filesystem via the `usePhotoGallery` hook
+   - Photo reference is stored in state and Preferences
+   - Photos are displayed in both Tab 2 and Tab 3
+
+2. **Upload Flow**:
+   - User navigates to Tab 3
+   - Selects to upload photos
+   - Photos are converted to FormData and sent to API endpoint
+   - Upload status is displayed to user
+   - On successful upload, photo session is cleared
+
+## API Integration
+
+The app connects to a FastAPI endpoint at `https://api.petetreadaway.com/api/image-upload` using a POST request with:
+
+- FormData containing images as blobs
+- SKU identifier (currently hardcoded as "IOS-Test1")
+- Debug flag set to "true"
+
+## Platform Compatibility
+
+The app handles differences between web and native (iOS/Android) platforms through:
+- Platform detection via `isPlatform('hybrid')`
+- Different file handling strategies based on platform
+- Path conversion for hybrid platforms using `Capacitor.convertFileSrc`
+
+## Implementation Details for LLM Agents
+
+### State Management
+- React Context API used for photo gallery state sharing
+- Local state hooks used for UI-specific state
+- Capacitor Preferences API for persistent storage
+
+### Plugin Integration
+- Camera: `@capacitor/camera`
+- Filesystem: `@capacitor/filesystem`
+- Barcode Scanner: `@capacitor/barcode-scanner`
+- Preferences: `@capacitor/preferences`
+
+### Error Handling
+- Includes extensive error handling in filesystem operations
+- Debug information in Tab 3 helps troubleshoot platform-specific issues
+- Toast notifications for user feedback on operations
+
+### Platform-Specific Logic
+- The app contains several platform checks and workarounds for different behavior on web vs. iOS/Android
+- File path handling is especially important and has specific cleanup logic to prevent issues
+
+## Future Plans
+- Convert fixed SKU to a more dynamic process
+- Enhance error handling and user feedback
+- Improve UI/UX across all tabs
