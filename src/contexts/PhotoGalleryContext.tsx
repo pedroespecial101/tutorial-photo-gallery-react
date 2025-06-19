@@ -3,6 +3,9 @@ import { usePhotoGallery, UserPhoto, UploadStatus } from '../hooks/usePhotoGalle
 
 interface PhotoGalleryContextType {
   photos: UserPhoto[];
+  scannedSku: string | null;
+  setScannedSku: (sku: string | null) => void;
+  validateSkuFormat: (sku: string | null) => boolean;
   takePhoto: () => Promise<void>;
   pickImages: () => Promise<void>;
   deletePhoto: (photo: UserPhoto) => Promise<void>;

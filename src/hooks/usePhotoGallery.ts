@@ -20,6 +20,7 @@ const PHOTO_STORAGE = 'photos';
 
 export function usePhotoGallery() {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
+  const [scannedSku, setScannedSku] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     message: '',
@@ -328,7 +329,10 @@ export function usePhotoGallery() {
 
   const clearPhotos = async () => {
     try {
-      console.log('Clearing photo session...');
+      console.log('Clearing photo session and scanned SKU...');
+      
+      // Reset the scanned SKU
+      setScannedSku(null);
       
       // Delete all photo files from filesystem
       for (const photo of photos) {
@@ -457,8 +461,20 @@ export function usePhotoGallery() {
     setUploadStatus(prev => ({ ...prev, show: false }));
   };
 
+  // Validate SKU format using regex
+  const validateSkuFormat = (sku: string | null): boolean => {
+    if (!sku) return false;
+    
+    // Validate that SKU is less than 11 characters
+    const skuRegex = /^.{1,10}$/;
+    return skuRegex.test(sku);
+  };
+
   return {
     photos,
+    scannedSku,
+    setScannedSku,
+    validateSkuFormat,
     takePhoto,
     pickImages,
     deletePhoto,
