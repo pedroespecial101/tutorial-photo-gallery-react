@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { isPlatform } from '@ionic/react';
-import { Camera, CameraResultType, CameraSource, Photo } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource, Photo, GalleryPhoto, GalleryPhotos } from '@capacitor/camera';
 import { Filesystem, Directory, FilesystemEncoding } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
@@ -69,6 +69,34 @@ export function usePhotoGallery() {
     const newPhotos = [savedFileImage, ...photos];
     setPhotos(newPhotos);
     Preferences.set({key: PHOTO_STORAGE,value: JSON.stringify(newPhotos)});
+  };
+
+  const pickImages = async () => {
+    const galleryPhotos = await Camera.pickImages({
+      quality: 90,
+      limit: 10
+    });
+    
+    const newPhotos = [...photos]; // Start with existing photos
+    
+    // Process each selected photo
+    for (const galleryPhoto of galleryPhotos.photos) {
+      const fileName = new Date().getTime() + Math.floor(Math.random() * 1000) + '.jpeg';
+      
+      // Create a Photo object compatible with savePicture
+      const photoToSave: Photo = {
+        path: galleryPhoto.path,
+        webPath: galleryPhoto.webPath,
+        format: 'jpeg',
+        saved: false
+      };
+      
+      const savedFileImage = await savePicture(photoToSave, fileName);
+      newPhotos.unshift(savedFileImage); // Add to beginning of array
+    }
+    
+    setPhotos(newPhotos);
+    Preferences.set({key: PHOTO_STORAGE, value: JSON.stringify(newPhotos)});
   };
 
   const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
@@ -432,6 +460,7 @@ export function usePhotoGallery() {
   return {
     photos,
     takePhoto,
+    pickImages,
     deletePhoto,
     uploadPhotos,
     clearPhotos,

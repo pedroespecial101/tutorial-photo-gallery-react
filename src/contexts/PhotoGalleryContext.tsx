@@ -4,6 +4,7 @@ import { usePhotoGallery, UserPhoto, UploadStatus } from '../hooks/usePhotoGalle
 interface PhotoGalleryContextType {
   photos: UserPhoto[];
   takePhoto: () => Promise<void>;
+  pickImages: () => Promise<void>;
   deletePhoto: (photo: UserPhoto) => Promise<void>;
   uploadPhotos: (sku?: string) => Promise<void>;
   clearPhotos: () => Promise<void>;
