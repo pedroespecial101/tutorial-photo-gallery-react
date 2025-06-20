@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { usePhotoGallery } from '../hooks/usePhotoGallery';
+import { usePhotoGalleryIntegration } from '../hooks/usePhotoGalleryIntegration';
 import { UserPhoto, UploadStatus, ScannedCodes } from '../types/photoTypes';
 
 interface PhotoGalleryContextType {
@@ -27,7 +27,7 @@ interface PhotoGalleryProviderProps {
 }
 
 export const PhotoGalleryProvider: React.FC<PhotoGalleryProviderProps> = ({ children }) => {
-  const photoGalleryData = usePhotoGallery();
+  const photoGalleryData = usePhotoGalleryIntegration();
 
   return (
     <PhotoGalleryContext.Provider value={photoGalleryData}>
