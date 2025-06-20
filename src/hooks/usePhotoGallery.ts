@@ -5,6 +5,7 @@ import { Camera, CameraResultType, CameraSource, Photo, GalleryPhoto, GalleryPho
 import { Filesystem, Directory, FilesystemEncoding } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
+import MD5 from 'crypto-js/md5';
 
 export interface UserPhoto {
   filepath: string;
@@ -294,7 +295,7 @@ export function usePhotoGallery() {
     }
   };
 
-  // Create a simple hash from a string for cache busting
+  // Create a simple hash from a string for cache busting (legacy method)
   const generateHashFromString = (input: string): string => {
     let hash = 0;
     if (input.length === 0) return hash.toString();
@@ -308,6 +309,13 @@ export function usePhotoGallery() {
     // Convert to a positive hex string
     return Math.abs(hash).toString(16);
   };
+  
+  // Generate MD5 hash of a base64 string or any other content
+  const generateMD5Hash = (content: string): string => {
+    // Limit input size for performance in case of large files
+    const sampleContent = content.length > 10000 ? content.substring(0, 10000) : content;
+    return MD5(sampleContent).toString();
+  };
 
   const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
     let base64Data: string;
@@ -320,8 +328,20 @@ export function usePhotoGallery() {
     } else {
       base64Data = await base64FromPath(photo.webPath!);
     }
+    
+    // Generate an MD5 hash from the image data for a unique identifier
+    const md5Hash = generateMD5Hash(base64Data);
+    
+    // Insert the MD5 hash into the filename
+    const lastDotIndex = fileName.lastIndexOf('.');
+    const fileNameWithoutExt = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+    const extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : '.jpeg';
+    const hashedFileName = `${fileNameWithoutExt}_${md5Hash}${extension}`;
+    
+    console.log(`Saving original photo with hashed filename: ${hashedFileName}`);
+    
     const savedFile = await Filesystem.writeFile({
-      path: fileName,
+      path: hashedFileName,
       data: base64Data,
       directory: Directory.Data
     });
@@ -341,6 +361,7 @@ export function usePhotoGallery() {
       const savedPhoto: UserPhoto = {
         filepath: filepath,
         webviewPath: Capacitor.convertFileSrc(filepath),
+        fileName: hashedFileName
       };
 
       // Create a backup of this original photo for future cropping operations
@@ -348,6 +369,7 @@ export function usePhotoGallery() {
         // Extract the filename for creating the original backup
         const mainFileName = extractFilename(filepath);
         const lastDotIndex = mainFileName.lastIndexOf('.');
+        // Create the original backup with the same hash to maintain relationship
         const originalFileName = lastDotIndex !== -1 ? 
           mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex) : 
           mainFileName + '_original';
@@ -370,16 +392,17 @@ export function usePhotoGallery() {
     else {
       // For web platform
       const savedPhoto: UserPhoto = {
-        filepath: fileName,
-        webviewPath: photo.webPath
+        filepath: hashedFileName,
+        webviewPath: photo.webPath,
+        fileName: hashedFileName
       };
 
       // Create a backup of this original photo for future cropping operations
       try {
-        const lastDotIndex = fileName.lastIndexOf('.');
+        const lastDotIndex = hashedFileName.lastIndexOf('.');
         const originalFileName = lastDotIndex !== -1 ? 
-          fileName.substring(0, lastDotIndex) + '_original' + fileName.substring(lastDotIndex) : 
-          fileName + '_original';
+          hashedFileName.substring(0, lastDotIndex) + '_original' + hashedFileName.substring(lastDotIndex) : 
+          hashedFileName + '_original';
         
         console.log(`Creating initial backup of original image: ${originalFileName}`);
         
@@ -783,41 +806,65 @@ export function usePhotoGallery() {
     return !!scannedCodes.sku;
   };
 
-  // Save cropped photo - replace original with cropped version
+  // Save cropped photo - replace original with cropped version using filename-based cache busting
   const saveCroppedPhoto = async (photoToUpdate: UserPhoto, croppedImageBase64: string): Promise<void> => {
     try {
       // Convert base64 string (from cutting data:image/jpeg;base64,)
       const base64Data = croppedImageBase64.split(',')[1];
       
       // Extract the filename from the filepath
-      const filename = extractFilename(photoToUpdate.filepath);
+      const oldFilename = extractFilename(photoToUpdate.filepath);
+      const oldFilePath = photoToUpdate.filepath;
       
-      console.log(`Saving cropped photo to: ${filename}`);
+      // Create an MD5 hash from the cropped image data for cache busting
+      const md5Hash = generateMD5Hash(base64Data);
       
-      // Create a hash from the cropped image data for cache busting
-      // Using a simple hash function that's much better than timestamps
-      const hashForCacheBusting = generateHashFromString(base64Data.substring(0, 1000));
+      // Create a new filename with the hash embedded
+      // Pattern: originalname_[hash].jpeg
+      const fileNameWithoutExt = oldFilename.substring(0, oldFilename.lastIndexOf('.'));
+      const extension = oldFilename.substring(oldFilename.lastIndexOf('.'));
+      const newFilename = `${fileNameWithoutExt}_${md5Hash}${extension}`;
       
-      // Write the cropped image to disk, replacing the main image
+      console.log(`Saving cropped photo with new filename: ${newFilename} (was: ${oldFilename})`);
+      
+      // Write the cropped image to disk with the new hashed filename
       const savedFile = await Filesystem.writeFile({
-        path: filename,
+        path: newFilename,
         data: base64Data,
         directory: Directory.Data
       });
       
-      // Update the webviewPath with hash-based cache busting
+      // Get the full path to the new file
+      let newFilePath: string;
+      if (isPlatform('hybrid')) {
+        // For hybrid, use the URI from savedFile but remove any trailing slash
+        newFilePath = savedFile.uri!;
+        if (newFilePath.endsWith('/')) {
+          newFilePath = newFilePath.slice(0, -1);
+        }
+      } else {
+        // For web, just use the new filename
+        newFilePath = newFilename;
+      }
+      
+      // Generate a new webviewPath for the new file
+      let newWebviewPath: string;
+      if (isPlatform('hybrid')) {
+        newWebviewPath = Capacitor.convertFileSrc(newFilePath);
+      } else {
+        // For web, use the base64 data directly
+        newWebviewPath = croppedImageBase64;
+      }
+      
+      // Update the photos array with the new filepath and webviewPath
       const updatedPhotos = photos.map(p => {
         if (p.filepath === photoToUpdate.filepath) {
-          let newWebviewPath: string;
-          if (isPlatform('hybrid')) {
-            // For hybrid platforms, use the platform-specific Capacitor.convertFileSrc
-            newWebviewPath = Capacitor.convertFileSrc(p.filepath);
-          } else {
-            // For web, use the new base64 data directly
-            newWebviewPath = croppedImageBase64;
-          }
-          // Add a hash parameter to force refresh
-          return { ...p, webviewPath: `${newWebviewPath}?h=${hashForCacheBusting}` };
+          return { 
+            ...p, 
+            filepath: newFilePath,
+            webviewPath: newWebviewPath,
+            fileName: newFilename // Optional, store filename separately if needed
+          };
         }
         return p;
       });
@@ -825,6 +872,23 @@ export function usePhotoGallery() {
       // Update state and storage
       setPhotos(updatedPhotos);
       await Preferences.set({key: PHOTO_STORAGE, value: JSON.stringify(updatedPhotos)});
+      
+      // Try to delete the old file since we've replaced it
+      try {
+        // Get just the filename for deletion
+        const filenameForDeletion = isPlatform('hybrid') 
+          ? extractFilename(oldFilePath)
+          : oldFilename;
+          
+        await Filesystem.deleteFile({
+          path: filenameForDeletion,
+          directory: Directory.Data
+        });
+        console.log(`Deleted old image file: ${filenameForDeletion}`);
+      } catch (deleteError) {
+        // Just log the error, don't throw it since the main operation succeeded
+        console.error('Failed to delete old photo file', deleteError);
+      }
     } catch (error) {
       console.error('Failed to save cropped photo', error);
       throw error;
