@@ -3,6 +3,8 @@ import { detectAndValidateCode, BarcodeResult } from '../services/barcodeService
 import { isPlatform } from '@ionic/react';
 import { Camera, CameraResultType, CameraSource, Photo, GalleryPhoto, GalleryPhotos } from '@capacitor/camera';
 import { Filesystem, Directory, FilesystemEncoding } from '@capacitor/filesystem';
+// Import version from package.json
+import packageInfo from '../../package.json';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
 import MD5 from 'crypto-js/md5';
@@ -33,6 +35,7 @@ export interface ScannedCodes {
 }
 
 const PHOTO_STORAGE = 'photos';
+const APP_VERSION_STORAGE_KEY = 'appVersion';
 
 // Helper function to extract just the filename from a filepath
 const extractFilename = (filepath: string): string => {
@@ -123,29 +126,107 @@ export function usePhotoGallery() {
     show: false
   });
 
-  const loadSaved = async () => {
-    await cleanupPhotosStorage();
-    const { value } = await Preferences.get({key: PHOTO_STORAGE });
+  // MD5 hash function is imported from crypto-js at the top of the file
 
-    const photosInPreferences = (value ? JSON.parse(value) : []) as UserPhoto[];
+  // Check for new app version and wipe data if necessary
+  const checkAppVersionAndReset = async (): Promise<boolean> => {
+    try {
+      // Get current app version from package.json
+      const currentAppVersion = packageInfo.version;
+      
+      // Get stored app version from preferences
+      const { value: storedAppVersion } = await Preferences.get({ key: APP_VERSION_STORAGE_KEY });
+      
+      console.log(`App version check - Current: ${currentAppVersion}, Stored: ${storedAppVersion || 'not set'}`);
+      
+      // If versions don't match or no stored version exists, perform a complete wipe
+      if (!storedAppVersion || storedAppVersion !== currentAppVersion) {
+        console.log(`New app version detected (current: ${currentAppVersion}, previous: ${storedAppVersion || 'none'}). Wiping all photo data.`);
+        
+        // Wipe everything from filesystem
+        try {
+          // List files in the data directory
+          const result = await Filesystem.readdir({
+            directory: Directory.Data,
+            path: ''
+          });
+          
+          // Delete all jpeg files
+          const imageFiles = result.files.filter(file => file.name.endsWith('.jpeg'));
+          
+          console.log(`Deleting ${imageFiles.length} image files due to new app version`);
+          
+          for (const file of imageFiles) {
+            try {
+              await Filesystem.deleteFile({
+                path: file.name,
+                directory: Directory.Data
+              });
+              console.log(`Deleted ${file.name} during version change cleanup`);
+            } catch (e) {
+              console.error(`Failed to delete ${file.name}:`, e);
+            }
+          }
+        } catch (e) {
+          // Directory might not exist yet, which is fine
+          console.log('No filesystem directory found during version change cleanup');
+        }
+        
+        // Clear preferences
+        await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify([]) });
+        
+        // Update stored version
+        await Preferences.set({ key: APP_VERSION_STORAGE_KEY, value: currentAppVersion });
+        
+        // Clear the photos state
+        setPhotos([]);
+        
+        console.log('Full app data reset completed due to version change');
+        return true; // Indicate that a reset occurred
+      }
+      
+      // No version change detected
+      return false;
+    } catch (error) {
+      console.error('Error checking app version:', error);
+      return false;
+    }
+  };
+
+  const loadSaved = async () => {
+    console.log('Starting app initialization');
     
-    // Process photos based on platform
-    for (let photo of photosInPreferences) {
-      if (!isPlatform('hybrid')) {
-        // Web platform: Load the photo as base64 data
-        const file = await Filesystem.readFile({
-          path: photo.filepath,
-          directory: Directory.Data
-        });
-        photo.webviewPath = `data:image/jpeg;base64,${file.data}`;
-      } else {
-        // Hybrid platform (iOS/Android): Convert file path to HTTP
-        // This ensures photos are still viewable after app restart
-        photo.webviewPath = Capacitor.convertFileSrc(photo.filepath);
+    // Check for new app version first and reset if needed
+    const wasReset = await checkAppVersionAndReset();
+    
+    // If a reset occurred, we can skip loading saved photos since we just wiped them
+    if (wasReset) {
+      console.log('Skipping photo loading after app reset');
+      return;
+    }
+    
+    console.log('Loading saved photos');
+    const { value } = await Preferences.get({ key: PHOTO_STORAGE });
+    
+    const photosInStorage = (value ? JSON.parse(value) : []) as UserPhoto[];
+    
+    // If running on the web platform...
+    if (!isPlatform('hybrid')) {
+      for (let photo of photosInStorage) {
+        // Read each photo from the filesystem into the webviewPath
+        if (photo.filepath) {
+          const file = await Filesystem.readFile({
+            path: photo.filepath,
+            directory: Directory.Data
+          });
+          
+          photo.webviewPath = `data:image/jpeg;base64,${file.data}`;
+        }
       }
     }
     
-    setPhotos(photosInPreferences);
+    setPhotos(photosInStorage);            
+    await cleanupPhotosStorage();
   };
 
   useEffect(() => {
@@ -441,6 +522,14 @@ export function usePhotoGallery() {
       const { value } = await Preferences.get({ key: PHOTO_STORAGE });
       const storedPhotos = (value ? JSON.parse(value) : []) as UserPhoto[];
       
+      // If no photos are stored, nothing to clean up
+      if (storedPhotos.length === 0) {
+        console.log('No photos in preferences, nothing to clean up');
+        return;
+      }
+      
+      console.log(`Found ${storedPhotos.length} photo(s) in preferences`);
+      
       // Get actual files from filesystem
       let filesInStorage: string[] = [];
       try {
@@ -449,9 +538,19 @@ export function usePhotoGallery() {
           path: ''
         });
         filesInStorage = result.files.map(file => file.name).filter(name => name.endsWith('.jpeg'));
+        console.log(`Found ${filesInStorage.length} jpeg file(s) in filesystem`);
+        // Output the full filenames of the files in the filesystem
+        console.log('Files in filesystem:', filesInStorage);
       } catch (e) {
         // Directory might not exist yet, which is fine for first run
-        console.log('No photo directory found, nothing to clean up');
+        console.log('No photo directory found, checking if we need to clear preferences');
+        
+        // If directory doesn't exist but we have tracked files, clear them
+        if (storedPhotos.length > 0) {
+          console.log('Tracked files registered but no filesystem directory found - clearing all tracked files');
+          await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify([]) });
+          setPhotos([]);
+        }
         return;
       }
 
@@ -500,6 +599,13 @@ export function usePhotoGallery() {
       // Combine both sets of tracked filenames
       const allTrackedFilenames = [...trackedFilenames, ...trackedOriginalFilenames];
       console.log('Currently tracking these files:', allTrackedFilenames);
+      
+      // First, check for missing tracked files (files in preferences but not on filesystem)
+      // This specifically addresses the phantom image issue after builds
+      const missingFiles = allTrackedFilenames.filter(filename => !filesInStorage.includes(filename));
+      if (missingFiles.length > 0) {
+        console.log('Tracked files registered but not found on filesystem:', missingFiles);
+      }
 
       // Delete orphaned files (files that exist in filesystem but are not tracked)
       for (const filename of filesInStorage) {
@@ -543,7 +649,12 @@ export function usePhotoGallery() {
           filename = photo.filepath;
         }
         
-        return filesInStorage.includes(filename);
+        // This is the key check: ensure the file actually exists in the filesystem
+        const fileExists = filesInStorage.includes(filename);
+        if (!fileExists) {
+          console.log(`Removing phantom image entry for missing file: ${filename}`);
+        }
+        return fileExists;
       });
 
       // Update preferences with clean list
@@ -551,6 +662,8 @@ export function usePhotoGallery() {
         console.log(`Cleaned up ${storedPhotos.length - validPhotos.length} phantom image entries`);
         await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify(validPhotos) });
         setPhotos(validPhotos);
+      } else if (missingFiles.length > 0) {
+        console.log('All tracked photos still valid after filesystem check');
       }
     } catch (error) {
       console.error('Failed to cleanup photos storage', error);
@@ -846,6 +959,54 @@ export function usePhotoGallery() {
       } else {
         // For web, use the base64 data directly
         newWebviewPath = croppedImageBase64;
+      }
+      
+      // Handle _original file to maintain naming relationship
+      // Find the original file's current name
+      const lastDotIdx = oldFilename.lastIndexOf('.');
+      const oldOriginalFilename = lastDotIdx !== -1 ?
+        oldFilename.substring(0, lastDotIdx) + '_original' + oldFilename.substring(lastDotIdx) :
+        oldFilename + '_original';
+      
+      // Create the new name for the original file with the new hash
+      const newOriginalFilename = lastDotIdx !== -1 ?
+        newFilename.substring(0, newFilename.lastIndexOf('.')) + '_original' + newFilename.substring(newFilename.lastIndexOf('.')) :
+        newFilename + '_original';
+        
+      // Try to rename the _original file to match the new hashed filename pattern
+      try {
+        // Check if the old _original file exists
+        const result = await Filesystem.stat({
+          path: oldOriginalFilename,
+          directory: Directory.Data
+        });
+        
+        if (result) {
+          // Read the original file
+          const originalFileData = await Filesystem.readFile({
+            path: oldOriginalFilename,
+            directory: Directory.Data
+          });
+          
+          // Write it with the new filename
+          await Filesystem.writeFile({
+            path: newOriginalFilename,
+            data: originalFileData.data as string,
+            directory: Directory.Data
+          });
+          
+          console.log(`Renamed _original file from ${oldOriginalFilename} to ${newOriginalFilename}`);
+          
+          // Delete the old _original file
+          await Filesystem.deleteFile({
+            path: oldOriginalFilename,
+            directory: Directory.Data
+          });
+        }
+      } catch (originalError) {
+        // If _original file couldn't be found or processed, log the error
+        console.warn(`Could not update _original file: ${oldOriginalFilename} to ${newOriginalFilename}`, originalError);
+        // Continue anyway - the main cropping operation should still succeed
       }
       
       // Update the photos array with the new filepath and webviewPath
