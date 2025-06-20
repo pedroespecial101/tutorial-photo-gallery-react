@@ -12,22 +12,19 @@ const Tab2: React.FC = () => {
   // Add a force refresh state to ensure images are properly updated
   const [forceRefresh, setForceRefresh] = useState<number>(0);
   
-  // Use Ionic lifecycle hook to refresh photos when view becomes active
-  useIonViewWillEnter(() => {
-    console.log('Tab2: View will enter, refreshing photos');
-    // Reload photos from storage to get the latest data
-    loadSaved();
-    // Force a UI refresh
-    setForceRefresh(prev => prev + 1);
-  });
   
-  // Additional refresh when view did enter for better reliability
-  useIonViewDidEnter(() => {
-    // Small delay to ensure any async operations have completed
-    setTimeout(() => {
-      setForceRefresh(prev => prev + 1);
-    }, 300);
-  });
+  // ******************************************************
+  // Removed because it works without this, but may need to reintroduce it
+  // ******************************************************
+  // // Use Ionic lifecycle hook to refresh photos when view becomes active
+  // useIonViewWillEnter(() => {
+  //   console.log('Tab2: View will enter, refreshing photos');
+  //   // Reload photos from storage to get the latest data
+  //   loadSaved();
+  //   // Force a UI refresh
+  //   setForceRefresh(prev => prev + 1);
+  // });
+
   const history = useHistory();
   
   const handleImageClick = (photo: UserPhoto) => {
