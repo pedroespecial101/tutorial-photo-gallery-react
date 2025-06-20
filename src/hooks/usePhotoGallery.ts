@@ -219,78 +219,36 @@ export function usePhotoGallery() {
     return { originalFilePath, mainFileName, originalFileName };
   };
   
-  // Get or create original image for cropping
-  const getOrCreateOriginalForCrop = async (photo: UserPhoto): Promise<string> => {
+  // Get the "_original" file for cropping (we now assume it always exists since we create it at photo capture time)
+  const getOrCreateOriginalForCrop = async (photoForCrop: UserPhoto): Promise<string> => {
     try {
-      const { originalFilePath, mainFileName, originalFileName } = getOriginalPhotoFileDetails(photo);
+      // Extract just the filename part from the filepath
+      const mainFilename = extractFilename(photoForCrop.filepath);
+
+      // Create a filename for the original version
+      const lastDotIndex = mainFilename.lastIndexOf('.');
+      const originalFilename = lastDotIndex !== -1 ? 
+        mainFilename.substring(0, lastDotIndex) + '_original' + mainFilename.substring(lastDotIndex) : 
+        mainFilename + '_original';
+
+      console.log(`Getting original file for cropping: ${originalFilename}`);
       
-      // Check if original file exists
-      let originalExists = false;
+      // Read the original file's contents - we now assume it exists since we create it at photo capture time
       try {
-        await Filesystem.stat({
-          path: originalFileName,
+        const originalFile = await Filesystem.readFile({
+          path: originalFilename,
           directory: Directory.Data
         });
-        originalExists = true;
-        console.log(`Original file already exists: ${originalFileName}`);
+        
+        // Return the base64 data with proper data URL prefix
+        return `data:image/jpeg;base64,${originalFile.data}`;
       } catch (e) {
-        // File doesn't exist, we'll create it
-        originalExists = false;
-        console.log(`Original file doesn't exist, creating: ${originalFileName}`);
-      }
-      
-      // If original doesn't exist, try to get the main file and create an original backup
-      if (!originalExists) {
-        try {
-          console.log(`Creating original file: ${originalFileName} from ${mainFileName}`);
-          
-          // Read the main file
-          const mainFile = await Filesystem.readFile({
-            path: mainFileName,
-            directory: Directory.Data
-          });
-          
-          if (!mainFile.data) {
-            throw new Error('Main file data is empty or invalid');
-          }
-          
-          // Check if the data seems valid (simple validation)
-          if (typeof mainFile.data === 'string' && mainFile.data.length > 100) {
-            // Write it to the original filename and capture the URI from the result
-            const writeResult = await Filesystem.writeFile({
-              path: originalFileName,
-              data: mainFile.data as string,
-              directory: Directory.Data
-            });
-            
-            // For hybrid platforms, use the URI from the write result
-            if (isPlatform('hybrid') && writeResult.uri) {
-              console.log(`Original file created with URI: ${writeResult.uri}`);
-              // Remove any trailing slash that might cause issues
-              const cleanUri = writeResult.uri.endsWith('/') ? 
-                writeResult.uri.slice(0, -1) : writeResult.uri;
-              return Capacitor.convertFileSrc(cleanUri);
-            }
-          } else {
-            console.error('Main file data appears to be invalid. Cannot create original.');
-            throw new Error('Invalid main file data');
-          }
-        } catch (error) {
-          console.error('Error creating original from main file:', error);
-          throw error;
-        }
-      }
-      
-      // Return the webview path for the original image
-      try {
-        const originalWebviewPath = await getWebviewPathForFile(originalFileName);
-        return originalWebviewPath;
-      } catch (error) {
-        console.error('Error getting webview path for original file:', error);
-        throw error;
+        // If for some reason the original doesn't exist (shouldn't happen), log and throw
+        console.error(`Error: Original file ${originalFilename} not found. This indicates a problem with our backup process.`, e);
+        throw new Error(`Original file not found: ${originalFilename}. Photo management inconsistency detected.`);
       }
     } catch (error) {
-      console.error('Error getting or creating original for crop:', error);
+      console.error('Failed to get original photo for cropping', error);
       throw error;
     }
   };
@@ -476,7 +434,7 @@ export function usePhotoGallery() {
     setPhotos(newPhotos);
   };
 
-  // New function to clean up photo storage on startup
+  // Clean up photo storage on startup
   const cleanupPhotosStorage = async () => {
     try {
       // Get stored photo metadata from preferences
@@ -497,7 +455,7 @@ export function usePhotoGallery() {
         return;
       }
 
-      // Find orphaned files (files that exist in the filesystem but not in preferences)
+      // Extract tracked filenames from stored photos metadata
       const trackedFilenames = storedPhotos.map(photo => {
         // Extract filename properly based on platform
         let filename: string;
@@ -530,10 +488,22 @@ export function usePhotoGallery() {
         
         return filename;
       });
+      
+      // Also add the corresponding _original filenames to the tracked list
+      const trackedOriginalFilenames = trackedFilenames.map(filename => {
+        const lastDotIndex = filename.lastIndexOf('.');
+        return lastDotIndex !== -1 ? 
+          filename.substring(0, lastDotIndex) + '_original' + filename.substring(lastDotIndex) : 
+          filename + '_original';
+      });
+      
+      // Combine both sets of tracked filenames
+      const allTrackedFilenames = [...trackedFilenames, ...trackedOriginalFilenames];
+      console.log('Currently tracking these files:', allTrackedFilenames);
 
-      // Delete orphaned files
+      // Delete orphaned files (files that exist in filesystem but are not tracked)
       for (const filename of filesInStorage) {
-        if (!trackedFilenames.includes(filename)) {
+        if (!allTrackedFilenames.includes(filename)) {
           console.log(`Cleaning up orphaned file: ${filename}`);
           await Filesystem.deleteFile({
             path: filename,
@@ -609,7 +579,10 @@ export function usePhotoGallery() {
     try {
       console.log('Clearing photo session and all scanned codes...');
       
-      // Delete all photo files from filesystem
+      // Keep track of files that need to be deleted
+      const filesToDelete = new Set<string>();
+      
+      // Identify all photo files and their _original counterparts
       for (const photo of photos) {
         try {
           let filename: string;
@@ -633,13 +606,32 @@ export function usePhotoGallery() {
             filename = photo.filepath;
           }
           
+          // Add main photo file to deletion list
+          filesToDelete.add(filename);
+          
+          // Create and add _original backup filename to deletion list
+          const lastDotIndex = filename.lastIndexOf('.');
+          const originalFilename = lastDotIndex !== -1 ? 
+            filename.substring(0, lastDotIndex) + '_original' + filename.substring(lastDotIndex) : 
+            filename + '_original';
+          
+          filesToDelete.add(originalFilename);
+        } catch (error) {
+          console.error('Error processing file for deletion:', photo.filepath, error);
+        }
+      }
+      
+      // Delete all identified files
+      for (const filename of filesToDelete) {
+        try {
           await Filesystem.deleteFile({
             path: filename,
             directory: Directory.Data
           });
           console.log(`Deleted file: ${filename}`);
         } catch (error) {
-          console.error('Error deleting file:', photo.filepath, error);
+          console.error('Error deleting file:', filename, error);
+          // Continue with other files even if one fails
         }
       }
       
