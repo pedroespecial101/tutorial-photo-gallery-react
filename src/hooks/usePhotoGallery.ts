@@ -1,23 +1,15 @@
 import { useState, useEffect } from 'react';
-import { detectAndValidateCode, processScannedCode as processCode, hasValidSku as checkValidSku } from '../services/barcodeService';
+import { processScannedCode as processCode, hasValidSku as checkValidSku } from '../services/barcodeService';
 import { uploadPhotos as uploadToServer } from '../services/uploadService';
-import { loadSaved as loadSavedPhotos, clearPhotos as clearStoredPhotos, savePhotosToPreferences, PHOTO_STORAGE, APP_VERSION_STORAGE_KEY } from '../services/storageService';
-import { isPlatform } from '@ionic/react';
-import { Camera, CameraResultType, CameraSource, Photo, GalleryPhoto, GalleryPhotos } from '@capacitor/camera';
-import { Filesystem, Directory, FilesystemEncoding } from '@capacitor/filesystem';
+import { loadSaved as loadSavedPhotos, clearPhotos as clearStoredPhotos, savePhotosToPreferences, PHOTO_STORAGE } from '../services/storageService';
+import { Photo } from '@capacitor/camera';
 // Import version from package.json
 import packageInfo from '../../package.json';
 import { Preferences } from '@capacitor/preferences';
-import { Capacitor } from '@capacitor/core';
 import { UserPhoto, UploadStatus, ScannedCodes } from '../types/photoTypes';
-import { extractFilename, getWebviewPathForFile, generateHashFromString, generateMD5Hash, base64FromPath } from '../utils/fileUtils';
 // Import the photo service functions
 import { savePicture, takePhoto, pickImages, deletePhoto } from '../services/photoService';
 import { getOrCreateOriginalForCrop, saveCroppedPhoto as saveEditedPhoto } from '../services/imageEditService';
-
-// Storage constants moved to storageService.ts
-
-
 
 export function usePhotoGallery() {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
@@ -39,72 +31,7 @@ export function usePhotoGallery() {
     show: false
   });
 
-  // MD5 hash function is imported from crypto-js at the top of the file
-
-  // Check for new app version and wipe data if necessary
-  const checkAppVersionAndReset = async (): Promise<boolean> => {
-    try {
-      // Get current app version from package.json
-      const currentAppVersion = packageInfo.version;
-      
-      // Get stored app version from preferences
-      const { value: storedAppVersion } = await Preferences.get({ key: APP_VERSION_STORAGE_KEY });
-      
-      console.log(`App version check - Current: ${currentAppVersion}, Stored: ${storedAppVersion || 'not set'}`);
-      
-      // If versions don't match or no stored version exists, perform a complete wipe
-      if (!storedAppVersion || storedAppVersion !== currentAppVersion) {
-        console.log(`New app version detected (current: ${currentAppVersion}, previous: ${storedAppVersion || 'none'}). Wiping all photo data.`);
-        
-        // Wipe everything from filesystem
-        try {
-          // List files in the data directory
-          const result = await Filesystem.readdir({
-            directory: Directory.Data,
-            path: ''
-          });
-          
-          // Delete all jpeg files
-          const imageFiles = result.files.filter(file => file.name.endsWith('.jpeg'));
-          
-          console.log(`Deleting ${imageFiles.length} image files due to new app version`);
-          
-          for (const file of imageFiles) {
-            try {
-              await Filesystem.deleteFile({
-                path: file.name,
-                directory: Directory.Data
-              });
-              console.log(`Deleted ${file.name} during version change cleanup`);
-            } catch (e) {
-              console.error(`Failed to delete ${file.name}:`, e);
-            }
-          }
-        } catch (e) {
-          // Directory might not exist yet, which is fine
-          console.log('No filesystem directory found during version change cleanup');
-        }
-        
-        // Clear preferences
-        await Preferences.set({ key: PHOTO_STORAGE, value: JSON.stringify([]) });
-        
-        // Update stored version
-        await Preferences.set({ key: APP_VERSION_STORAGE_KEY, value: currentAppVersion });
-        
-        // Clear the photos state
-        setPhotos([]);
-        
-        console.log('Full app data reset completed due to version change');
-        return true; // Indicate that a reset occurred
-      }
-      
-      // No version change detected
-      return false;
-    } catch (error) {
-      console.error('Error checking app version:', error);
-      return false;
-    }
-  };
+  // NOTE: checkAppVersionAndReset function has been moved to storageService.ts and is called through loadSaved
 
   const loadSaved = async () => {
     try {
@@ -159,30 +86,6 @@ export function usePhotoGallery() {
     await savePhotosToPreferences(newPhotos);
   };
 
-  // Get file details for original and main photo
-  const getOriginalPhotoFileDetails = (photo: UserPhoto): { originalFilePath: string, mainFileName: string, originalFileName: string } => {
-    const mainFileName = extractFilename(photo.filepath);
-    // Create the original filename by inserting '_original' before the extension
-    const lastDotIndex = mainFileName.lastIndexOf('.');
-    let originalFileName = '';
-    if (lastDotIndex !== -1) {
-      originalFileName = mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex);
-    } else {
-      originalFileName = mainFileName + '_original';
-    }
-    
-    let originalFilePath: string;
-    if (isPlatform('hybrid')) {
-      // For hybrid, replace the main filename with the original filename in the full path
-      originalFilePath = photo.filepath.replace(mainFileName, originalFileName);
-    } else {
-      // For web, just the filename
-      originalFilePath = originalFileName;
-    }
-    
-    return { originalFilePath, mainFileName, originalFileName };
-  };
-  
   // Get the "_original" file for cropping (we now assume it always exists since we create it at photo capture time)
   const handleGetOrCreateOriginalForCrop = async (photoForCrop: UserPhoto): Promise<string> => {
     try {

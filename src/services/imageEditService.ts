@@ -12,6 +12,34 @@ import { extractFilename, generateMD5Hash } from '../utils/fileUtils';
  */
 
 /**
+ * Get file details for original and main photo
+ * @param photo The photo to get details for
+ * @returns Object containing file paths and names
+ */
+export const getOriginalPhotoFileDetails = (photo: UserPhoto): { originalFilePath: string, mainFileName: string, originalFileName: string } => {
+  const mainFileName = extractFilename(photo.filepath);
+  // Create the original filename by inserting '_original' before the extension
+  const lastDotIndex = mainFileName.lastIndexOf('.');
+  let originalFileName = '';
+  if (lastDotIndex !== -1) {
+    originalFileName = mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex);
+  } else {
+    originalFileName = mainFileName + '_original';
+  }
+  
+  let originalFilePath: string;
+  if (isPlatform('hybrid')) {
+    // For hybrid, replace the main filename with the original filename in the full path
+    originalFilePath = photo.filepath.replace(mainFileName, originalFileName);
+  } else {
+    // For web, just the filename
+    originalFilePath = originalFileName;
+  }
+  
+  return { originalFilePath, mainFileName, originalFileName };
+};
+
+/**
  * Get or create an original copy of an image for cropping
  * This allows preserving the original image while editing
  * @param photoForCrop The photo to get the original version for

@@ -113,35 +113,8 @@ export const cleanupPhotosStorage = async (): Promise<UserPhoto[]> => {
 
     // Extract tracked filenames from stored photos metadata
     const trackedFilenames = storedPhotos.map(photo => {
-      // Extract filename properly based on platform
-      let filename: string;
-      
-      if (isPlatform('hybrid')) {
-        // For hybrid platforms, extract only the file name from the full URI
-        const docsSegmentIndex = photo.filepath.lastIndexOf('Documents/');
-        
-        if (docsSegmentIndex !== -1) {
-          // Get everything after 'Documents/'
-          filename = photo.filepath.substring(docsSegmentIndex + 'Documents/'.length);
-          
-          // Remove any trailing slash
-          if (filename.endsWith('/')) {
-            filename = filename.slice(0, -1);
-          }
-        } else {
-          // Fallback to just taking the part after the last '/'
-          filename = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
-          
-          // Remove any trailing slash
-          if (filename.endsWith('/')) {
-            filename = filename.slice(0, -1);
-          }
-        }
-      } else {
-        filename = photo.filepath;
-      }
-      
-      return filename;
+      // Extract filename using the utility function
+      return extractFilename(photo.filepath);
     });
     
     // Check for photos in preferences that don't exist in filesystem anymore
@@ -209,26 +182,8 @@ export const clearPhotos = async (photos: UserPhoto[]): Promise<void> => {
     // Identify all photo files and their _original counterparts
     for (const photo of photos) {
       try {
-        let filename: string;
-        
-        if (isPlatform('hybrid')) {
-          // Extract filename from full path
-          const docsSegmentIndex = photo.filepath.lastIndexOf('Documents/');
-          
-          if (docsSegmentIndex !== -1) {
-            filename = photo.filepath.substring(docsSegmentIndex + 'Documents/'.length);
-            if (filename.endsWith('/')) {
-              filename = filename.slice(0, -1);
-            }
-          } else {
-            filename = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
-            if (filename.endsWith('/')) {
-              filename = filename.slice(0, -1);
-            }
-          }
-        } else {
-          filename = photo.filepath;
-        }
+        // Extract filename using the utility function
+        const filename = extractFilename(photo.filepath);
         
         // Add main photo file to deletion list
         filesToDelete.add(filename);

@@ -48,40 +48,9 @@ export const pickImages = async () => {
  */
 export const deletePhoto = async (photo: UserPhoto): Promise<void> => {
   try {
-    // Extract the correct filename based on platform
-    let filename: string;
-    
-    if (isPlatform('hybrid')) {
-      // For hybrid platforms, extract only the file name from the full URI
-      // This handles paths like: file:///var/mobile/.../.../Documents/1234.jpeg
-      
-      // First find the last segment containing 'Documents/'
-      const docsSegmentIndex = photo.filepath.lastIndexOf('Documents/');
-      
-      if (docsSegmentIndex !== -1) {
-        // Get everything after 'Documents/'
-        filename = photo.filepath.substring(docsSegmentIndex + 'Documents/'.length);
-        
-        // Remove any trailing slash
-        if (filename.endsWith('/')) {
-          filename = filename.slice(0, -1);
-        }
-      } else {
-        // Fallback to just taking the part after the last '/'
-        filename = photo.filepath.substr(photo.filepath.lastIndexOf('/') + 1);
-        
-        // Remove any trailing slash
-        if (filename.endsWith('/')) {
-          filename = filename.slice(0, -1);
-        }
-      }
-      
-      console.log(`Deleting file: ${filename} from hybrid path: ${photo.filepath}`);
-    } else {
-      // For web, filepath is already just the filename
-      filename = photo.filepath;
-      console.log(`Deleting file: ${filename} from web path`);
-    }
+    // Extract the correct filename using the extractFilename utility
+    const filename = extractFilename(photo.filepath);
+    console.log(`Deleting file: ${filename} from path: ${photo.filepath}`);
     
     // Delete photo file from filesystem
     await Filesystem.deleteFile({
@@ -143,13 +112,11 @@ export const savePicture = async (photo: Photo, fileName: string): Promise<UserP
 
     // Create a backup of this original photo for future cropping operations
     try {
-      // Extract the filename for creating the original backup
-      const mainFileName = extractFilename(filepath);
-      const lastDotIndex = mainFileName.lastIndexOf('.');
-      // Create the original backup with the same hash to maintain relationship
+      // Create the original filename by inserting '_original' before the extension
+      const lastDotIndex = hashedFileName.lastIndexOf('.');
       const originalFileName = lastDotIndex !== -1 ? 
-        mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex) : 
-        mainFileName + '_original';
+        hashedFileName.substring(0, lastDotIndex) + '_original' + hashedFileName.substring(lastDotIndex) : 
+        hashedFileName + '_original';
       
       console.log(`Creating initial backup of original image: ${originalFileName}`);
       
