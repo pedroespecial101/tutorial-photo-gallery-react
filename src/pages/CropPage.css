@@ -1,7 +1,7 @@
 .cropContainer {
     position: relative;
     width: 100%;
-    height: 250px;
+    height: calc(65vh);
     background: #333;
   }
   
@@ -46,5 +46,71 @@
     --bar-background: #a0a0a0;
     --bar-background-active: var(--ion-color-primary);
     --knob-background: var(--ion-color-primary);
+  }
+  
+  /* New styles for the crop controls */
+  .aspect-controls {
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    position: relative;
+  }
+  
+  .image-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+  }
+  
+  .control-button {
+    --background: rgba(0, 0, 0, 0.5);
+    --color: white;
+    --border-radius: 50%;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    --box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+    height: 48px;
+    width: 48px;
+  }
+  
+  .rotation-controls {
+    display: flex;
+    gap: 16px;
+  }
+  
+  /* Prominent crop button style */
+  .crop-btn {
+    --background: var(--ion-color-primary);
+    --color: white;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --border-radius: 8px;
+    font-weight: 500;
+  }
+  
+  .copy-crop-btn {
+    --background: var(--ion-color-secondary);
+  }
+
+  /* Override Ionic segment for aspect ratio */
+  ion-segment {
+    --background: transparent;
+    margin-bottom: 8px;
+  }
+  
+  .footer-buttons-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 8px;
+  }
+  
+  .cancel-btn {
+    --color: var(--ion-color-medium);
   }
   

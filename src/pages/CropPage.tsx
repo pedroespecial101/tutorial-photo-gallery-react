@@ -9,8 +9,10 @@ import {
   IonButtons,
   IonBackButton,
   IonFooter,
+  IonIcon,
   useIonRouter
 } from '@ionic/react';
+import { cropOutline, copyOutline } from 'ionicons/icons';
 import { useLocation } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import { getCroppedImg } from '../utils/cropImage';
@@ -29,12 +31,16 @@ const CropPage: React.FC = () => {
   const { saveCroppedPhoto, getOrCreateOriginalForCrop } = usePhotoGalleryContext();
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropAreaPixels | null>(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [rotation, setRotation] = useState(0);
   const router = useIonRouter();
   
   // Use the custom hook for image loading and aspect ratio detection
   const { 
     sourceImage, 
     aspect, 
+    naturalAspect,
+    imageWidth,
+    imageHeight,
     isLoading, 
     setAspect 
   } = useImageAspect({
@@ -44,6 +50,11 @@ const CropPage: React.FC = () => {
 
   const handleCropComplete = (croppedAreaPixels: CropAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
+  };
+  
+  // Track rotation value from ImageCropper component
+  const handleRotationChange = (newRotation: number) => {
+    setRotation(newRotation);
   };
 
   const handleCrop = async () => {
@@ -57,7 +68,7 @@ const CropPage: React.FC = () => {
       const croppedImg = await getCroppedImg(
         sourceImage, // Use the original image source for cropping
         croppedAreaPixels,
-        0 // No rotation as requested
+        rotation // Apply the rotation value 
       );
       
       // Save the cropped image (will overwrite the main image, not the original)
@@ -74,6 +85,34 @@ const CropPage: React.FC = () => {
 
   const handleCancel = () => {
     router.goBack();
+  };
+
+  // Placeholder for Copy & Crop functionality
+  const handleCopyAndCrop = async () => {
+    if (!photo || !sourceImage || !croppedAreaPixels) {
+      console.error('Missing required data for copy & crop');
+      return;
+    }
+    
+    try {
+      setIsCropping(true);
+      const croppedImg = await getCroppedImg(
+        sourceImage,
+        croppedAreaPixels,
+        rotation
+      );
+      
+      // TODO: Implement copy functionality here
+      console.log('Copy & Crop not yet implemented');
+      // For now, just do a regular crop
+      await saveCroppedPhoto(photo, croppedImg);
+      
+      router.goBack();
+    } catch (e) {
+      console.error('Error in copy & crop:', e);
+    } finally {
+      setIsCropping(false);
+    }
   };
 
   return (
@@ -95,8 +134,13 @@ const CropPage: React.FC = () => {
           <ImageCropper
             image={sourceImage}
             aspect={aspect}
+            naturalAspect={naturalAspect}
+            imageWidth={imageWidth}
+            imageHeight={imageHeight}
             onAspectChange={setAspect}
             onCropComplete={handleCropComplete}
+            onCopyAndCrop={handleCopyAndCrop}
+            onRotationChange={handleRotationChange}
           />
         ) : (
           <div className="error-container" style={{ height: '70vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -106,20 +150,39 @@ const CropPage: React.FC = () => {
       </IonContent>
       <IonFooter>
         <IonToolbar>
-          <IonButtons slot="secondary">
-            <IonButton onClick={handleCancel}>
+          <div className="footer-buttons-container">
+            <IonButton 
+              className="cancel-btn" 
+              fill="outline" 
+              onClick={handleCancel}
+              disabled={isCropping}
+            >
               Cancel
             </IonButton>
-          </IonButtons>
-          <IonButtons slot="primary">
+            
             <IonButton 
+              className="copy-crop-btn" 
+              onClick={handleCopyAndCrop}
+              disabled={isCropping || !croppedAreaPixels}
+            >
+              <IonIcon icon={copyOutline} />
+              <span style={{ marginLeft: '5px' }}>Copy & Crop</span>
+            </IonButton>
+
+            <IonButton 
+              className="crop-btn" 
               onClick={handleCrop} 
               strong={true} 
               disabled={isCropping || !croppedAreaPixels}
             >
-              {isCropping ? 'Processing...' : 'Crop Image'}
+              {isCropping ? 'Processing...' : (
+                <>
+                  <IonIcon icon={cropOutline} /> 
+                  <span style={{ marginLeft: '5px' }}>Crop</span>
+                </>
+              )}
             </IonButton>
-          </IonButtons>
+          </div>
         </IonToolbar>
       </IonFooter>
     </IonPage>
