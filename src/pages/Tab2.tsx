@@ -3,7 +3,7 @@ import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabBut
 import { camera, trash, images } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
-import { UserPhoto } from '../hooks/usePhotoGallery';
+import { UserPhoto } from '../types/photoTypes';
 import './Tab2.css';
 
 const Tab2: React.FC = () => {

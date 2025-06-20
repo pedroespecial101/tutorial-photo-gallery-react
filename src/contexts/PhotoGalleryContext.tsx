@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { usePhotoGallery, UserPhoto, UploadStatus, ScannedCodes } from '../hooks/usePhotoGallery';
+import { usePhotoGallery } from '../hooks/usePhotoGallery';
+import { UserPhoto, UploadStatus, ScannedCodes } from '../types/photoTypes';
 
 interface PhotoGalleryContextType {
   photos: UserPhoto[];

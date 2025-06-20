@@ -18,7 +18,7 @@ import { useLocation } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
 import Cropper from 'react-easy-crop';
 import { getCroppedImg } from '../utils/cropImage';
-import { UserPhoto } from '../hooks/usePhotoGallery';
+import { UserPhoto } from '../types/photoTypes';
 import './Tab4.css'; // Reuse the same styles
 
 interface LocationState {

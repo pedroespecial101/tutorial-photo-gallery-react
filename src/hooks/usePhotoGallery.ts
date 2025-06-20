@@ -8,31 +8,7 @@ import packageInfo from '../../package.json';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
 import MD5 from 'crypto-js/md5';
-
-export interface UserPhoto {
-  filepath: string;
-  webviewPath?: string;
-  fileName?: string;
-}
-
-export interface UploadStatus {
-  message: string;
-  color: 'success' | 'danger' | 'warning';
-  show: boolean;
-}
-
-export interface ScannedCodes {
-  sku: string | null;
-  ean: string | null;
-  upc: string | null;
-  isbn: string | null;
-  // Display versions with original formatting
-  skuDisplay: string | null;
-  eanDisplay: string | null;
-  upcDisplay: string | null;
-  isbnDisplay: string | null;
-  lastScanResult: BarcodeResult | null;
-}
+import { UserPhoto, UploadStatus, ScannedCodes } from '../types/photoTypes';
 
 const PHOTO_STORAGE = 'photos';
 const APP_VERSION_STORAGE_KEY = 'appVersion';
