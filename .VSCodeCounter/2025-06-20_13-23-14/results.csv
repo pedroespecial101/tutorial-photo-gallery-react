@@ -1,0 +1,30 @@
+"filename", "language", "TypeScript", "CSS", "TypeScript JSX", "comment", "blank", "total"
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/App.test.tsx", "TypeScript JSX", 0, 0, 7, 0, 2, 9
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/App.tsx", "TypeScript JSX", 0, 0, 80, 4, 8, 92
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/components/ExploreContainer.css", "CSS", 0, 21, 0, 0, 3, 24
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/components/ExploreContainer.tsx", "TypeScript JSX", 0, 0, 13, 0, 4, 17
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/contexts/PhotoGalleryContext.tsx", "TypeScript JSX", 0, 0, 39, 0, 7, 46
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/hooks/useBarcodeScanner.ts", "TypeScript", 43, 0, 0, 6, 8, 57
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/hooks/usePhotoGallery.ts", "TypeScript", 240, 0, 0, 47, 59, 346
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/main.tsx", "TypeScript JSX", 0, 0, 12, 0, 0, 12
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/CropPage.tsx", "TypeScript JSX", 0, 0, 171, 8, 15, 194
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab1.css", "CSS", 0, 15, 0, 5, 3, 23
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab1.tsx", "TypeScript JSX", 0, 0, 136, 9, 13, 158
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab2.css", "CSS", 0, 59, 0, 1, 9, 69
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab2.tsx", "TypeScript JSX", 0, 0, 94, 12, 16, 122
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab3.css", "CSS", 0, 0, 0, 0, 1, 1
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab3.tsx", "TypeScript JSX", 0, 0, 227, 9, 28, 264
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab4.css", "CSS", 0, 41, 0, 0, 9, 50
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/pages/Tab4.tsx", "TypeScript JSX", 0, 0, 104, 1, 10, 115
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/barcodeService.ts", "TypeScript", 98, 0, 0, 34, 18, 150
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/imageEditService.ts", "TypeScript", 122, 0, 0, 50, 26, 198
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/photoService.ts", "TypeScript", 122, 0, 0, 50, 28, 200
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/storageService.ts", "TypeScript", 197, 0, 0, 59, 50, 306
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/uploadService.ts", "TypeScript", 73, 0, 0, 13, 14, 100
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/setupTests.ts", "TypeScript", 8, 0, 0, 5, 2, 15
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/theme/variables.css", "CSS", 0, 176, 0, 24, 37, 237
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/types/photoTypes.ts", "TypeScript", 22, 0, 0, 1, 4, 27
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/utils/cropImage.ts", "TypeScript", 45, 0, 0, 18, 12, 75
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/utils/fileUtils.ts", "TypeScript", 82, 0, 0, 19, 13, 114
+"/Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/vite-env.d.ts", "TypeScript", 0, 0, 0, 1, 1, 2
+"Total", "-", 1052, 312, 883, 376, 400, 3023

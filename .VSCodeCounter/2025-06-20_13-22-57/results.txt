@@ -1,0 +1,29 @@
+Date : 2025-06-20 13:22:57
+Directory : /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services
+Total : 5 files,  612 codes, 206 comments, 136 blanks, all 954 lines
+
+Languages
++------------+------------+------------+------------+------------+------------+
+| language   | files      | code       | comment    | blank      | total      |
++------------+------------+------------+------------+------------+------------+
+| TypeScript |          5 |        612 |        206 |        136 |        954 |
++------------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                              | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                 |          5 |        612 |        206 |        136 |        954 |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| filename                                                                                          | language   | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/barcodeService.ts   | TypeScript |         98 |         34 |         18 |        150 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/imageEditService.ts | TypeScript |        122 |         50 |         26 |        198 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/photoService.ts     | TypeScript |        122 |         50 |         28 |        200 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/storageService.ts   | TypeScript |        197 |         59 |         50 |        306 |
+| /Users/petetreadaway/Projects/ionic/tutorial-photo-gallery-react/src/services/uploadService.ts    | TypeScript |         73 |         13 |         14 |        100 |
+| Total                                                                                             |            |        612 |        206 |        136 |        954 |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+

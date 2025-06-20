@@ -1,4 +1,5 @@
 import { ean, upc, isbn } from 'luhn-validation';
+import { ScannedCodes } from '../types/photoTypes';
 
 export interface BarcodeResult {
   type: string;
@@ -96,4 +97,53 @@ export function isUpc(code: string): boolean {
 // EAN-13 codes must be exactly 13 digits
 export function isEan(code: string): boolean {
   return /^\d{13}$/.test(code);
+}
+
+/**
+ * Process a scanned barcode and update the scanned codes state
+ * @param scannedCode The raw scanned barcode
+ * @param currentScannedCodes The current scanned codes state
+ * @returns The updated scanned codes state
+ */
+export function processScannedCode(scannedCode: string, currentScannedCodes: ScannedCodes): ScannedCodes {
+  if (!scannedCode) return currentScannedCodes;
+  
+  // Detect and validate the code
+  const result = detectAndValidateCode(scannedCode);
+  console.log('Code detection result:', result);
+  
+  // Create a new state based on the detected type
+  const newState = { ...currentScannedCodes, lastScanResult: result };
+  
+  switch (result.type) {
+    case 'SKU':
+      newState.sku = result.valid ? result.code : null;
+      // Use original code format for display (preserve non-alphanumeric characters)
+      newState.skuDisplay = result.valid ? result.originalCode : null;
+      break;
+    case 'EAN-13':
+      newState.ean = result.valid ? result.code : null;
+      newState.eanDisplay = result.valid ? (result.displayCode || result.code) : null;
+      break;
+    case 'UPC':
+      newState.upc = result.valid ? result.code : null;
+      newState.upcDisplay = result.valid ? (result.displayCode || result.code) : null;
+      break;
+    case 'ISBN-10':
+    case 'ISBN-13':
+      newState.isbn = result.valid ? result.code : null;
+      newState.isbnDisplay = result.valid ? (result.displayCode || result.code) : null;
+      break;
+  }
+  
+  return newState;
+}
+
+/**
+ * Check if the scanned codes state contains a valid SKU
+ * @param scannedCodes The current scanned codes state
+ * @returns Boolean indicating whether there's a valid SKU
+ */
+export function hasValidSku(scannedCodes: ScannedCodes): boolean {
+  return !!scannedCodes.sku;
 }
