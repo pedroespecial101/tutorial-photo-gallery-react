@@ -231,46 +231,82 @@ export function usePhotoGallery() {
           directory: Directory.Data
         });
         originalExists = true;
+        console.log(`Original file already exists: ${originalFileName}`);
       } catch (e) {
         // File doesn't exist, we'll create it
         originalExists = false;
+        console.log(`Original file doesn't exist, creating: ${originalFileName}`);
       }
       
-      // If original doesn't exist, create it by copying the main file
+      // If original doesn't exist, try to get the main file and create an original backup
       if (!originalExists) {
-        console.log(`Creating original file: ${originalFileName} from ${mainFileName}`);
-        
-        // First, read the main file
-        const mainFile = await Filesystem.readFile({
-          path: mainFileName,
-          directory: Directory.Data
-        });
-        
-        // Write it to the original filename and capture the URI from the result
-        const writeResult = await Filesystem.writeFile({
-          path: originalFileName,
-          data: mainFile.data as string,
-          directory: Directory.Data
-        });
-        
-        // For hybrid platforms, use the URI from the write result
-        if (isPlatform('hybrid') && writeResult.uri) {
-          console.log(`Original file created with URI: ${writeResult.uri}`);
-          // Remove any trailing slash that might cause issues
-          const cleanUri = writeResult.uri.endsWith('/') ? 
-            writeResult.uri.slice(0, -1) : writeResult.uri;
-          return Capacitor.convertFileSrc(cleanUri);
+        try {
+          console.log(`Creating original file: ${originalFileName} from ${mainFileName}`);
+          
+          // Read the main file
+          const mainFile = await Filesystem.readFile({
+            path: mainFileName,
+            directory: Directory.Data
+          });
+          
+          if (!mainFile.data) {
+            throw new Error('Main file data is empty or invalid');
+          }
+          
+          // Check if the data seems valid (simple validation)
+          if (typeof mainFile.data === 'string' && mainFile.data.length > 100) {
+            // Write it to the original filename and capture the URI from the result
+            const writeResult = await Filesystem.writeFile({
+              path: originalFileName,
+              data: mainFile.data as string,
+              directory: Directory.Data
+            });
+            
+            // For hybrid platforms, use the URI from the write result
+            if (isPlatform('hybrid') && writeResult.uri) {
+              console.log(`Original file created with URI: ${writeResult.uri}`);
+              // Remove any trailing slash that might cause issues
+              const cleanUri = writeResult.uri.endsWith('/') ? 
+                writeResult.uri.slice(0, -1) : writeResult.uri;
+              return Capacitor.convertFileSrc(cleanUri);
+            }
+          } else {
+            console.error('Main file data appears to be invalid. Cannot create original.');
+            throw new Error('Invalid main file data');
+          }
+        } catch (error) {
+          console.error('Error creating original from main file:', error);
+          throw error;
         }
-      } else {
-        console.log(`Original file already exists: ${originalFileName}`);
       }
       
       // Return the webview path for the original image
-      return await getWebviewPathForFile(originalFileName);
+      try {
+        const originalWebviewPath = await getWebviewPathForFile(originalFileName);
+        return originalWebviewPath;
+      } catch (error) {
+        console.error('Error getting webview path for original file:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('Error getting or creating original for crop:', error);
       throw error;
     }
+  };
+
+  // Create a simple hash from a string for cache busting
+  const generateHashFromString = (input: string): string => {
+    let hash = 0;
+    if (input.length === 0) return hash.toString();
+    
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Convert to a positive hex string
+    return Math.abs(hash).toString(16);
   };
 
   const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
@@ -300,19 +336,65 @@ export function usePhotoGallery() {
         filepath = filepath.slice(0, -1);
         console.log('Fixed path with trailing slash:', filepath);
       }
-      
-      return {
+
+      // Create a UserPhoto object with the saved file path
+      const savedPhoto: UserPhoto = {
         filepath: filepath,
         webviewPath: Capacitor.convertFileSrc(filepath),
       };
+
+      // Create a backup of this original photo for future cropping operations
+      try {
+        // Extract the filename for creating the original backup
+        const mainFileName = extractFilename(filepath);
+        const lastDotIndex = mainFileName.lastIndexOf('.');
+        const originalFileName = lastDotIndex !== -1 ? 
+          mainFileName.substring(0, lastDotIndex) + '_original' + mainFileName.substring(lastDotIndex) : 
+          mainFileName + '_original';
+        
+        console.log(`Creating initial backup of original image: ${originalFileName}`);
+        
+        // Copy the original image data to the backup file
+        await Filesystem.writeFile({
+          path: originalFileName,
+          data: base64Data,
+          directory: Directory.Data
+        });
+      } catch (error) {
+        console.error('Failed to create backup of original photo:', error);
+        // Continue even if backup fails - just log the error
+      }
+      
+      return savedPhoto;
     }
     else {
-      // Use webPath to display the new image instead of base64 since it's
-      // already loaded into memory
-      return {
+      // For web platform
+      const savedPhoto: UserPhoto = {
         filepath: fileName,
         webviewPath: photo.webPath
       };
+
+      // Create a backup of this original photo for future cropping operations
+      try {
+        const lastDotIndex = fileName.lastIndexOf('.');
+        const originalFileName = lastDotIndex !== -1 ? 
+          fileName.substring(0, lastDotIndex) + '_original' + fileName.substring(lastDotIndex) : 
+          fileName + '_original';
+        
+        console.log(`Creating initial backup of original image: ${originalFileName}`);
+        
+        // Copy the original image data to the backup file
+        await Filesystem.writeFile({
+          path: originalFileName,
+          data: base64Data,
+          directory: Directory.Data
+        });
+      } catch (error) {
+        console.error('Failed to create backup of original photo:', error);
+        // Continue even if backup fails - just log the error
+      }
+      
+      return savedPhoto;
     }
   };
 
@@ -712,6 +794,10 @@ export function usePhotoGallery() {
       
       console.log(`Saving cropped photo to: ${filename}`);
       
+      // Create a hash from the cropped image data for cache busting
+      // Using a simple hash function that's much better than timestamps
+      const hashForCacheBusting = generateHashFromString(base64Data.substring(0, 1000));
+      
       // Write the cropped image to disk, replacing the main image
       const savedFile = await Filesystem.writeFile({
         path: filename,
@@ -719,23 +805,24 @@ export function usePhotoGallery() {
         directory: Directory.Data
       });
       
-      // Update the webviewPath with cache busting
+      // Update the webviewPath with hash-based cache busting
       const updatedPhotos = photos.map(p => {
         if (p.filepath === photoToUpdate.filepath) {
-          // Add a timestamp to bust the cache
           let newWebviewPath: string;
           if (isPlatform('hybrid')) {
+            // For hybrid platforms, use the platform-specific Capacitor.convertFileSrc
             newWebviewPath = Capacitor.convertFileSrc(p.filepath);
           } else {
-            // Use the new base64 data directly
+            // For web, use the new base64 data directly
             newWebviewPath = croppedImageBase64;
           }
-          // Add a timestamp query parameter to force refresh
-          return { ...p, webviewPath: newWebviewPath + '?t=' + new Date().getTime() };
+          // Add a hash parameter to force refresh
+          return { ...p, webviewPath: `${newWebviewPath}?h=${hashForCacheBusting}` };
         }
         return p;
       });
       
+      // Update state and storage
       setPhotos(updatedPhotos);
       await Preferences.set({key: PHOTO_STORAGE, value: JSON.stringify(updatedPhotos)});
     } catch (error) {

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonButton, useIonViewWillEnter } from '@ionic/react';
+import React, { useEffect, useState } from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonGrid, IonRow, IonCol, IonImg, IonButton, useIonViewWillEnter, useIonViewDidEnter } from '@ionic/react';
 import { camera, trash, images } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { usePhotoGalleryContext } from '../contexts/PhotoGalleryContext';
@@ -9,12 +9,24 @@ import './Tab2.css';
 const Tab2: React.FC = () => {
   // Destructure with a function to get the latest photos data
   const { deletePhoto, photos, takePhoto, pickImages, loadSaved } = usePhotoGalleryContext();
+  // Add a force refresh state to ensure images are properly updated
+  const [forceRefresh, setForceRefresh] = useState<number>(0);
   
   // Use Ionic lifecycle hook to refresh photos when view becomes active
   useIonViewWillEnter(() => {
     console.log('Tab2: View will enter, refreshing photos');
     // Reload photos from storage to get the latest data
     loadSaved();
+    // Force a UI refresh
+    setForceRefresh(prev => prev + 1);
+  });
+  
+  // Additional refresh when view did enter for better reliability
+  useIonViewDidEnter(() => {
+    // Small delay to ensure any async operations have completed
+    setTimeout(() => {
+      setForceRefresh(prev => prev + 1);
+    }, 300);
   });
   const history = useHistory();
   
@@ -48,12 +60,18 @@ const Tab2: React.FC = () => {
         <IonGrid>
           <IonRow>
             {photos.map((photo, index) => (
-              <IonCol size="6" key={index}>
+              <IonCol size="6" key={`${index}-${forceRefresh}`}>
                 <div 
                   className="photo-container"
                   onClick={() => handleImageClick(photo)}
                 >
-                  <IonImg src={photo.webviewPath} />
+                  {/* Add forceRefresh to key to ensure the IonImg re-renders completely */}
+                  <IonImg 
+                    key={`img-${index}-${forceRefresh}`} 
+                    src={`${photo.webviewPath}`} 
+                    onIonImgDidLoad={() => console.log(`Image loaded: ${photo.webviewPath}`)}
+                    onIonError={(e) => console.error(`Image error: ${photo.webviewPath}`, e)}
+                  />
                   <IonButton 
                     fill="clear"
                     color="danger" 
